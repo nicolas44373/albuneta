@@ -2,9 +2,9 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { reputationLabel, reputationColor, getInitials } from '@/lib/utils'
 import { cn } from '@/lib/utils'
-import { Zap, MapPin, Star, ArrowRight } from 'lucide-react'
+import { Zap, MapPin, Star } from 'lucide-react'
 import Link from 'next/link'
-import { startChatAction } from './actions'
+import { ChatButton } from './ChatButton'
 
 type MatchRow = {
   other_user_id: string
@@ -104,20 +104,7 @@ function MatchCard({ match }: { match: MatchRow }) {
         >
           Ver perfil
         </Link>
-        <form action={startChatAction} className="flex-1">
-          <input type="hidden" name="otherUserId" value={match.other_user_id} />
-          <button
-            type="submit"
-            className="w-full flex items-center justify-center gap-2 h-9 rounded-xl text-sm font-bold transition-all"
-            style={{
-              background: 'linear-gradient(135deg, #74ACDF 0%, #5b96cc 100%)',
-              color: 'white',
-              boxShadow: '0 2px 8px rgba(116,172,223,0.3)',
-            }}
-          >
-            Chatear <ArrowRight size={14} />
-          </button>
-        </form>
+        <ChatButton otherUserId={match.other_user_id} />
       </div>
     </div>
   )

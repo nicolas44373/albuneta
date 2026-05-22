@@ -29,6 +29,10 @@ drop policy if exists "Usuarios autenticados pueden registrar puntos de venta" o
 create policy "Usuarios autenticados pueden registrar puntos de venta" on public.sale_points
   for insert with check (auth.role() = 'authenticated');
 
+drop policy if exists "Usuarios autenticados pueden actualizar puntos de venta" on public.sale_points;
+create policy "Usuarios autenticados pueden actualizar puntos de venta" on public.sale_points
+  for update with check (auth.role() = 'authenticated');
+
 -- 5. Actualizar la función find_matches para filtrar por misma provincia
 drop function if exists public.find_matches(uuid);
 create or replace function public.find_matches(for_user_id uuid)
@@ -174,7 +178,23 @@ values
   ('Kiosco San Rafael Centro', 'Av. Mitre 200', 'Mendoza', 'San Rafael', -34.6176, -68.3299, 1200, 4800, true),
 
   -- Tucumán
-  ('Kiosco Central Tucumán', '25 de Mayo 100', 'Tucumán', 'San Miguel de Tucumán', -26.8272, -65.2038, 1200, 5000, true),
+  -- Tucumán (Foco Local)
+  ('Kiosco Plaza Independencia Tucumán', '25 de Mayo 50', 'Tucumán', 'San Miguel de Tucumán', -26.8282, -65.2024, 1200, 5000, true),
+  ('Estación Terminal Tucumán', 'Av. Brígido Terán 350', 'Tucumán', 'San Miguel de Tucumán', -26.8312, -65.1950, 1250, 5200, true),
+  ('Kiosco de la Suipacha', 'Suipacha 400', 'Tucumán', 'San Miguel de Tucumán', -26.8193, -65.2104, 1200, null, true),
+  ('Puesto Peatonal Mendoza', 'Mendoza 650', 'Tucumán', 'San Miguel de Tucumán', -26.8291, -65.2078, 1200, 5000, true),
+  ('Kiosco Av. Mate de Luna', 'Av. Mate de Luna 2100', 'Tucumán', 'San Miguel de Tucumán', -26.8288, -65.2285, 1250, 5500, true),
+  ('Kiosco Barrio Sur', 'General Paz 900', 'Tucumán', 'San Miguel de Tucumán', -26.8335, -65.2120, 1200, null, true),
+  ('Kiosco Plaza Urquiza', 'Santa Fe 500', 'Tucumán', 'San Miguel de Tucumán', -26.8188, -65.2030, 1300, 5500, true),
+  ('Maxi Kiosco Av. Avellaneda', 'Av. Avellaneda 450', 'Tucumán', 'San Miguel de Tucumán', -26.8185, -65.1945, 1200, 5000, false),
+  ('Kiosco Plaza San Martín (Tuc)', 'Chacabuco 700', 'Tucumán', 'San Miguel de Tucumán', -26.8360, -65.2085, 1200, 5100, true),
+  ('Kiosco Shopping Portal Tucumán', 'Cariola 1900', 'Tucumán', 'Yerba Buena', -26.8123, -65.2810, 1300, 5600, true),
+  ('Kiosco Av. Aconquija 1200', 'Av. Aconquija 1250', 'Tucumán', 'Yerba Buena', -26.8180, -65.2650, 1250, 5300, true),
+  ('Kiosco Plaza Marcos Paz', 'Shopping Marcos Paz', 'Tucumán', 'Yerba Buena', -26.8090, -65.2920, 1300, 5500, true),
+  ('Kiosco Centro Tafí Viejo', 'Av. Alem 200', 'Tucumán', 'Tafí Viejo', -26.7320, -65.2580, 1200, 5000, true),
+  ('Kiosco Plaza Mitre Concepción', 'San Martín 1200', 'Tucumán', 'Concepción', -27.3460, -65.5930, 1200, null, true),
+  ('Kiosco Plaza Belgrano BRS', 'Av. Santo Domingo 100', 'Tucumán', 'Banda del Río Salí', -26.8450, -65.1680, 1200, 4800, false),
+  ('Kiosco Plaza 9 de Julio Lules', 'Alberdi 150', 'Tucumán', 'Lules', -26.9240, -65.3380, 1200, 5000, true),
 
   -- Salta
   ('Kiosco Plaza 9 de Julio', 'Caseros 500', 'Salta', 'Salta', -24.7892, -65.4103, 1200, null, true),

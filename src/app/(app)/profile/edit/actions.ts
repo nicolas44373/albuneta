@@ -6,8 +6,12 @@ export async function updateProfileAction(
   formData: FormData
 ): Promise<{ error: string } | void> {
   const username = (formData.get('username') as string).trim()
-  const city     = (formData.get('city') as string).trim() || null
-  const province = (formData.get('province') as string).trim() || null
+  const city     = (formData.get('city') as string).trim()
+  const province = (formData.get('province') as string).trim()
+
+  if (!username) return { error: 'El nombre de usuario es obligatorio' }
+  if (!province) return { error: 'La provincia es obligatoria' }
+  if (!city) return { error: 'La localidad o ciudad es obligatoria' }
 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

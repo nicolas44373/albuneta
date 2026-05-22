@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import { ArrowLeft, Loader2, Check } from 'lucide-react'
 import Link from 'next/link'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { updateProfileAction } from './actions'
 
 type ProfileData = {
@@ -40,6 +41,10 @@ const ARG_PROVINCES = [
 ]
 
 export function ProfileEditClient({ profile }: { profile: ProfileData }) {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const isSetup = searchParams.get('setup') === 'true'
+
   const [username, setUsername] = useState(profile.username)
   const [city, setCity]         = useState(profile.city ?? '')
   const [province, setProvince] = useState(profile.province ?? '')
@@ -64,6 +69,14 @@ export function ProfileEditClient({ profile }: { profile: ProfileData }) {
       setError('Solo letras, números, guiones y puntos')
       return
     }
+    if (!province.trim()) {
+      setError('Debes seleccionar tu provincia')
+      return
+    }
+    if (!city.trim()) {
+      setError('Debes ingresar tu ciudad o localidad')
+      return
+    }
 
     startTransition(async () => {
       const form = new FormData()
@@ -71,8 +84,15 @@ export function ProfileEditClient({ profile }: { profile: ProfileData }) {
       form.set('city', city.trim())
       form.set('province', province.trim())
       const result = await updateProfileAction(form)
-      if (result?.error) setError(result.error)
-      else setSaved(true)
+      if (result?.error) {
+        setError(result.error)
+      } else {
+        setSaved(true)
+        router.refresh()
+        if (isSetup) {
+          router.replace('/album')
+        }
+      }
     })
   }
 
@@ -84,13 +104,15 @@ export function ProfileEditClient({ profile }: { profile: ProfileData }) {
         className="flex items-center gap-3 px-4 pt-6 pb-4 border-b"
         style={{ borderColor: '#e8f4fd' }}
       >
-        <Link
-          href="/profile"
-          className="p-1.5 rounded-lg border transition-colors"
-          style={{ background: 'white', borderColor: '#d4e9f8' }}
-        >
-          <ArrowLeft size={20} style={{ color: '#74ACDF' }} />
-        </Link>
+        {!isSetup && (
+          <Link
+            href="/profile"
+            className="p-1.5 rounded-lg border transition-colors"
+            style={{ background: 'white', borderColor: '#d4e9f8' }}
+          >
+            <ArrowLeft size={20} style={{ color: '#74ACDF' }} />
+          </Link>
+        )}
         <h1
           className="text-lg font-black"
           style={{ fontFamily: 'var(--font-baloo2), system-ui', color: '#1a2f45' }}
@@ -98,6 +120,16 @@ export function ProfileEditClient({ profile }: { profile: ProfileData }) {
           Editar perfil
         </h1>
       </div>
+
+      {isSetup && (
+        <div
+          className="mx-4 mt-4 p-4 rounded-xl border text-sm flex flex-col gap-1 shadow-sm animate-pulse"
+          style={{ background: '#fffbeb', borderColor: '#fef3c7', color: '#b45309' }}
+        >
+          <span className="font-bold text-base">⚠️ Configuración Obligatoria</span>
+          <span>Para usar Albuneta debes definir tu <strong>Provincia</strong> y <strong>Ciudad/Localidad</strong>. De esta manera podrás encontrar coleccionistas en tu misma zona para intercambios.</span>
+        </div>
+      )}
 
       <form onSubmit={submit} className="flex-1 px-4 py-6 space-y-5">
 
@@ -125,7 +157,7 @@ export function ProfileEditClient({ profile }: { profile: ProfileData }) {
         {/* Province */}
         <div className="space-y-2">
           <label className="text-sm font-semibold" style={{ color: '#1a2f45' }}>
-            Provincia <span style={{ color: '#9ab5cc', fontWeight: 400 }}>(opcional)</span>
+            Provincia <span className="text-red-500 font-bold">*</span>
           </label>
           <select
             value={province}
@@ -146,13 +178,13 @@ export function ProfileEditClient({ profile }: { profile: ProfileData }) {
         {/* City */}
         <div className="space-y-2">
           <label className="text-sm font-semibold" style={{ color: '#1a2f45' }}>
-            Ciudad <span style={{ color: '#9ab5cc', fontWeight: 400 }}>(opcional)</span>
+            Ciudad / Localidad <span className="text-red-500 font-bold">*</span>
           </label>
           <input
             type="text"
             value={city}
             onChange={e => setCity(e.target.value)}
-            placeholder="Buenos Aires, Córdoba, Rosario..."
+            placeholder="San Miguel de Tucumán, Yerba Buena, Tafí Viejo..."
             maxLength={50}
             className="w-full h-12 px-4 rounded-xl text-sm focus:outline-none transition-colors"
             style={{ background: '#f8fbff', border: '1.5px solid #d4e9f8', color: '#1a2f45' }}
@@ -160,7 +192,7 @@ export function ProfileEditClient({ profile }: { profile: ProfileData }) {
             onBlur={e  => (e.target.style.borderColor = '#d4e9f8')}
           />
           <p className="text-xs" style={{ color: '#9ab5cc' }}>
-            Tu ciudad ayuda a encontrar coleccionistas cerca tuyo.
+            Tu localidad ayuda a encontrar coleccionistas cerca tuyo para intercambiar.
           </p>
         </div>
 

@@ -212,6 +212,37 @@ export default function AlbumPage() {
   const [search, setSearch]         = useState('')
   const [showTutorial, setShowTutorial] = useState(false)
   const [tutorialStep, setTutorialStep] = useState(0)
+  const [showBanner, setShowBanner]     = useState(false)
+
+  // Touch swipe gestures for onboarding carousel
+  const [touchStart, setTouchStart] = useState<number | null>(null)
+  const [touchEnd, setTouchEnd] = useState<number | null>(null)
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchEnd(null)
+    setTouchStart(e.targetTouches[0].clientX)
+  }
+  const handleTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd(e.targetTouches[0].clientX)
+  }
+  const handleTouchEnd = () => {
+    if (!touchStart || !touchEnd) return
+    const distance = touchStart - touchEnd
+    const minDistance = 50
+    if (distance > minDistance && tutorialStep < 3) {
+      setTutorialStep(prev => prev + 1)
+    }
+    if (distance < -minDistance && tutorialStep > 0) {
+      setTutorialStep(prev => prev - 1)
+    }
+  }
+
+  // Load localStorage on mount to avoid hydration mismatch
+  useEffect(() => {
+    const dismissed = localStorage.getItem('albuneta_tutorial_banner_dismissed')
+    if (!dismissed) {
+      setShowBanner(true)
+    }
+  }, [])
 
   // Modals status
   const [activeSection, setActiveSection] = useState<{
@@ -326,6 +357,61 @@ export default function AlbumPage() {
     setPendingIds(prev => { const s = new Set(prev); s.delete(stickerId); return s })
   }, [userId, statusMap, detailSticker])
 
+  const handleCompleteSection = useCallback(async (sectionStickers: { id: string }[]) => {
+    if (!userId) return
+
+    // Find unmarked stickers in this section (where status is null/not set)
+    const unmarked = sectionStickers.filter(s => {
+      const info = statusMap.get(s.id)
+      return !info || info.status === null
+    })
+    if (unmarked.length === 0) return
+
+    setSaveError(null)
+
+    // Save previous state to rollback on error
+    const previousMap = new Map(statusMap)
+
+    // Optimistic Update local map state
+    setStatusMap(prev => {
+      const m = new Map(prev)
+      unmarked.forEach(s => {
+        m.set(s.id, { status: 'have', quantity: 1 })
+      })
+      return m
+    })
+    
+    setPendingIds(prev => {
+      const s = new Set(prev)
+      unmarked.forEach(item => s.add(item.id))
+      return s
+    })
+
+    const payload = unmarked.map(s => ({
+      user_id: userId,
+      sticker_id: s.id,
+      status: 'have' as const,
+      quantity: 1
+    }))
+
+    const { error } = await supabase
+      .from('user_stickers')
+      .insert(payload)
+
+    if (error) {
+      console.error('[album] bulk insert error:', error)
+      setSaveError(error.message)
+      // Rollback on error
+      setStatusMap(previousMap)
+    }
+
+    setPendingIds(prev => {
+      const s = new Set(prev)
+      unmarked.forEach(item => s.delete(item.id))
+      return s
+    })
+  }, [userId, statusMap, supabase])
+
   const sections = useMemo(() => {
     const groups = new Map<string, { number: number; id: string; rarity: string; playerName: string }[]>()
     ALL_STICKERS.forEach(entry => {
@@ -383,7 +469,7 @@ export default function AlbumPage() {
 
         <div className="flex items-center justify-between">
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
               <h1
                 className="text-lg font-black leading-none"
                 style={{ fontFamily: 'var(--font-baloo2), system-ui', color: '#1a2f45' }}
@@ -395,10 +481,10 @@ export default function AlbumPage() {
                   setTutorialStep(0)
                   setShowTutorial(true)
                 }}
-                className="flex items-center gap-0.5 text-[10px] font-black text-[#2a5f8f] bg-[#eef6fd] px-2 py-0.5 rounded-full border border-[#d4e9f8] hover:bg-[#74ACDF] hover:text-white transition-all select-none active:scale-95 cursor-pointer"
+                className="p-1 rounded-lg text-[#2a5f8f] hover:bg-[#eef6fd] hover:text-[#74ACDF] transition-all cursor-pointer"
+                title="Cómo funciona"
               >
-                <HelpCircle size={10} />
-                <span>¿Cómo funciona?</span>
+                <HelpCircle size={16} />
               </button>
             </div>
             <p className="text-[11px] mt-1 font-bold text-[#5b7a93]">
@@ -507,6 +593,45 @@ export default function AlbumPage() {
 
       {/* ── Content (Selections cards list) ── */}
       <div className="relative z-10 flex-1 px-4 pb-24 pt-2 space-y-2">
+        {/* Tutorial Banner */}
+        {showBanner && !loading && (
+          <div
+            className="p-4 rounded-2xl border flex items-start gap-3 relative overflow-hidden mb-4 shadow-sm"
+            style={{
+              background: 'linear-gradient(135deg, #eef6fd 0%, #e0effc 100%)',
+              borderColor: '#d4e9f8'
+            }}
+          >
+            <div className="p-2 rounded-xl bg-white border border-[#b8daf5] text-[#2a5f8f] shrink-0">
+              <HelpCircle size={20} />
+            </div>
+            <div className="flex-1 space-y-1 pr-6">
+              <h4 className="text-sm font-black text-[#1a2f45]">¿Cómo funciona Albuneta?</h4>
+              <p className="text-xs text-[#5b7a93] leading-relaxed">
+                Mirá nuestra guía rápida con ejemplos interactivos de cómo marcar tus figuritas, chatear y usar el mapa.
+              </p>
+              <button
+                onClick={() => {
+                  setTutorialStep(0)
+                  setShowTutorial(true)
+                }}
+                className="mt-1 text-xs font-black text-[#2a5f8f] hover:text-[#74ACDF] flex items-center gap-1 cursor-pointer"
+              >
+                Ver guía ilustrada →
+              </button>
+            </div>
+            <button
+              onClick={() => {
+                setShowBanner(false)
+                localStorage.setItem('albuneta_tutorial_banner_dismissed', 'true')
+              }}
+              className="absolute top-3 right-3 p-1 rounded-lg hover:bg-[#d4e9f8] text-[#5b7a93] transition-colors cursor-pointer"
+            >
+              <X size={14} />
+            </button>
+          </div>
+        )}
+
         {loading ? (
           <div className="flex flex-col items-center justify-center gap-3 h-52">
             <div
@@ -604,7 +729,7 @@ export default function AlbumPage() {
 
       {/* ── Selection Modal (Selección Ampliada) ── */}
       {activeSection && (
-        <div className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm flex flex-col justify-end sm:justify-center items-center px-0 sm:px-4">
+        <div className="fixed inset-0 z-[9990] bg-black/60 backdrop-blur-sm flex flex-col justify-end sm:justify-center items-center px-0 sm:px-4 animate-fade-in">
           <div
             className="w-full sm:max-w-md h-[90vh] sm:h-[80vh] bg-white rounded-t-3xl sm:rounded-3xl flex flex-col overflow-hidden shadow-2xl border animate-sheet-in sm:animate-modal-in"
             style={{ borderColor: '#d4e9f8' }}
@@ -711,13 +836,31 @@ export default function AlbumPage() {
             </div>
 
             {/* Modal Footer */}
-            <div className="p-4 border-t bg-white flex justify-end shrink-0" style={{ borderColor: '#e8f4fd' }}>
+            <div className="p-4 border-t bg-white flex justify-between items-center shrink-0" style={{ borderColor: '#e8f4fd' }}>
+              {(() => {
+                const teamStickers = activeSection.stickers
+                const hasUnmarked = teamStickers.some(s => {
+                  const info = statusMap.get(s.id)
+                  return !info || info.status === null
+                })
+                if (hasUnmarked) {
+                  return (
+                    <button
+                      onClick={() => handleCompleteSection(teamStickers)}
+                      className="px-4 h-11 rounded-xl text-xs font-black border transition-all active:scale-95 text-[#16a34a] border-[#86efac] bg-[#f0fdf4] hover:bg-[#e8fdf0] cursor-pointer flex items-center gap-1.5"
+                    >
+                      ✓ Completar restantes
+                    </button>
+                  )
+                }
+                return <div /> // Spacer
+              })()}
               <button
                 onClick={() => {
                   setActiveSection(null)
                   setDetailSticker(null)
                 }}
-                className="px-6 h-11 rounded-xl text-sm font-black bg-[#74ACDF] text-white transition-all active:scale-95"
+                className="px-6 h-11 rounded-xl text-sm font-black bg-[#74ACDF] text-white transition-all active:scale-95 cursor-pointer"
                 style={{ boxShadow: '0 2px 10px rgba(116,172,223,0.3)' }}
               >
                 Listo
@@ -729,7 +872,7 @@ export default function AlbumPage() {
 
       {/* ── Sub-modal / Sheet for Sticker Details ── */}
       {detailSticker && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
+        <div className="fixed inset-0 z-[9995] flex items-center justify-center bg-black/60 backdrop-blur-sm px-4 animate-fade-in">
           <div
             className="w-full max-w-sm rounded-3xl p-6 space-y-6 border shadow-2xl bg-white animate-modal-in"
             style={{ borderColor: '#d4e9f8' }}
@@ -857,7 +1000,7 @@ export default function AlbumPage() {
 
       {/* ── Onboarding / Graphic Tutorial Modal ── */}
       {showTutorial && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex flex-col justify-end sm:justify-center items-center px-0 sm:px-4 animate-fade-in">
+        <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex flex-col justify-end sm:justify-center items-center px-0 sm:px-4 animate-fade-in">
           <div
             className="w-full sm:max-w-md bg-white rounded-t-3xl sm:rounded-3xl flex flex-col overflow-hidden shadow-2xl border animate-sheet-in sm:animate-modal-in max-h-[90vh]"
             style={{ borderColor: '#d4e9f8' }}
@@ -880,7 +1023,12 @@ export default function AlbumPage() {
             </div>
 
             {/* Content Body */}
-            <div className="flex-1 overflow-y-auto p-5 space-y-5 flex flex-col justify-between">
+            <div
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
+              className="flex-1 overflow-y-auto p-5 space-y-5 flex flex-col justify-between select-none"
+            >
               
               {/* Graphic Representation Area */}
               <div className="flex-1 min-h-[160px] max-h-[220px] bg-[#f8fbfe] border border-[#d4e9f8] rounded-2xl flex items-center justify-center p-4 relative overflow-hidden select-none">
