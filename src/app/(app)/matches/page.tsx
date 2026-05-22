@@ -154,9 +154,10 @@ export default async function MatchesPage() {
       {/* Content */}
       <div className="flex-1 px-4 py-4 space-y-3">
         {error && (
-          <p className="text-sm text-center py-8" style={{ color: '#dc2626' }}>
-            Error cargando matches
-          </p>
+          <div className="text-sm text-center py-8 space-y-1">
+            <p style={{ color: '#dc2626' }}>Error cargando matches</p>
+            <p className="text-xs font-mono" style={{ color: '#9ab5cc' }}>{(error as { message?: string }).message}</p>
+          </div>
         )}
 
         {!error && list.length === 0 && (
