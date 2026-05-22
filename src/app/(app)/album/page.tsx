@@ -232,13 +232,14 @@ function GroupHeader({ group }: { group: string }) {
 // ─── Page ────────────────────────────────────────────────────────────────────
 
 export default function AlbumPage() {
-  const supabase = createClient()
+  const [supabase] = useState(() => createClient())
 
   const [userId, setUserId]         = useState<string | null>(null)
   const [dbStickers, setDbStickers] = useState<Sticker[]>([])
   const [statusMap, setStatusMap]   = useState<StatusMap>(new Map())
   const [pendingIds, setPendingIds] = useState<Set<string>>(new Set())
   const [loading, setLoading]       = useState(true)
+  const [saveError, setSaveError]   = useState<string | null>(null)
   const [filter, setFilter]         = useState<FilterTab>('all')
   const [search, setSearch]         = useState('')
 
@@ -273,20 +274,39 @@ export default function AlbumPage() {
     const current = statusMap.get(stickerId) ?? null
     const next: Status = current === null ? 'have' : current === 'have' ? 'need' : null
 
+    // Optimistic update
     setStatusMap(prev => { const m = new Map(prev); m.set(stickerId, next); return m })
     setPendingIds(prev => new Set(prev).add(stickerId))
+    setSaveError(null)
 
-    try {
-      await supabase.from('user_stickers').delete().eq('user_id', userId).eq('sticker_id', stickerId)
-      if (next !== null) {
-        await supabase.from('user_stickers').insert({ user_id: userId, sticker_id: stickerId, status: next, quantity: 1 })
-      }
-    } catch {
+    const { error: delErr } = await supabase
+      .from('user_stickers')
+      .delete()
+      .eq('user_id', userId)
+      .eq('sticker_id', stickerId)
+
+    if (delErr) {
+      console.error('[album] delete error:', delErr)
+      setSaveError(delErr.message)
       setStatusMap(prev => { const m = new Map(prev); m.set(stickerId, current); return m })
-    } finally {
       setPendingIds(prev => { const s = new Set(prev); s.delete(stickerId); return s })
+      return
     }
-  }, [userId, statusMap])
+
+    if (next !== null) {
+      const { error: insErr } = await supabase
+        .from('user_stickers')
+        .insert({ user_id: userId, sticker_id: stickerId, status: next, quantity: 1 })
+
+      if (insErr) {
+        console.error('[album] insert error:', insErr)
+        setSaveError(insErr.message)
+        setStatusMap(prev => { const m = new Map(prev); m.set(stickerId, current); return m })
+      }
+    }
+
+    setPendingIds(prev => { const s = new Set(prev); s.delete(stickerId); return s })
+  }, [userId, statusMap, supabase])
 
   const sections = useMemo(() => {
     const groups = new Map<string, { number: number; id: string; rarity: string; playerName: string }[]>()
@@ -426,6 +446,16 @@ export default function AlbumPage() {
           />
         </div>
       </div>
+
+      {/* ── Save error banner ── */}
+      {saveError && (
+        <div
+          className="relative z-10 mx-4 mt-2 px-3 py-2 rounded-xl text-xs border"
+          style={{ background: '#fef2f2', borderColor: '#fecaca', color: '#dc2626' }}
+        >
+          <strong>Error al guardar:</strong> {saveError}
+        </div>
+      )}
 
       {/* ── Legend ── */}
       <div className="relative z-10 flex items-center gap-4 px-4 py-2 text-[10px]" style={{ color: '#9ab5cc' }}>
