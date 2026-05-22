@@ -232,7 +232,7 @@ function GroupHeader({ group }: { group: string }) {
 // ─── Page ────────────────────────────────────────────────────────────────────
 
 export default function AlbumPage() {
-  const [supabase] = useState(() => createClient())
+  const supabase = createClient()
 
   const [userId, setUserId]         = useState<string | null>(null)
   const [dbStickers, setDbStickers] = useState<Sticker[]>([])
@@ -306,7 +306,7 @@ export default function AlbumPage() {
     }
 
     setPendingIds(prev => { const s = new Set(prev); s.delete(stickerId); return s })
-  }, [userId, statusMap, supabase])
+  }, [userId, statusMap]) // supabase es un singleton estable internamente
 
   const sections = useMemo(() => {
     const groups = new Map<string, { number: number; id: string; rarity: string; playerName: string }[]>()
