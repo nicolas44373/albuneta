@@ -180,6 +180,11 @@ values
   -- Tucumán
   -- Tucumán (Foco Local)
   ('Kiosco Plaza Independencia Tucumán', '25 de Mayo 50', 'Tucumán', 'San Miguel de Tucumán', -26.8282, -65.2024, 1200, 5000, true),
+  ('Sucursal Central / El Bajo', 'Av. Juan B. Justo 960', 'Tucumán', 'San Miguel de Tucumán', -26.8165, -65.1956, 1200, 5000, true),
+  ('Sucursal Microcentro', 'Junín 263', 'Tucumán', 'San Miguel de Tucumán', -26.8276, -65.2062, 1200, 5000, true),
+  ('Sucursal Sur', 'Av. Colón 582 (esquina La Plata)', 'Tucumán', 'San Miguel de Tucumán', -26.8362, -65.2215, 1200, null, true),
+  ('Sucursal Terminal', 'Av. Benjamín Aráoz 108', 'Tucumán', 'San Miguel de Tucumán', -26.8306, -65.1932, 1250, 5200, true),
+  ('Sucursal Yerba Buena (Isla)', 'Shopping Portal Tucumán (Av. Belgrano 2226)', 'Tucumán', 'Yerba Buena', -26.8115, -65.2798, 1300, 5500, true),
   ('Estación Terminal Tucumán', 'Av. Brígido Terán 350', 'Tucumán', 'San Miguel de Tucumán', -26.8312, -65.1950, 1250, 5200, true),
   ('Kiosco de la Suipacha', 'Suipacha 400', 'Tucumán', 'San Miguel de Tucumán', -26.8193, -65.2104, 1200, null, true),
   ('Puesto Peatonal Mendoza', 'Mendoza 650', 'Tucumán', 'San Miguel de Tucumán', -26.8291, -65.2078, 1200, 5000, true),

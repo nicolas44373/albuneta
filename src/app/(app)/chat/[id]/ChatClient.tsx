@@ -37,7 +37,7 @@ function RatingModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 backdrop-blur-sm px-4 pb-6">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
       <div
         className="w-full max-w-sm rounded-3xl p-6 space-y-5 border"
         style={{ background: 'white', borderColor: '#d4e9f8', boxShadow: '0 -4px 30px rgba(116,172,223,0.15)' }}
@@ -152,6 +152,15 @@ export function ChatClient({
   const [showStickers, setShowStickers] = useState(false)
   const [status, setStatus]         = useState(matchStatus)
   const bottomRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search)
+      if (params.get('complete') === 'true' && status !== 'completed') {
+        setShowRating(true)
+      }
+    }
+  }, [status])
 
   useEffect(() => {
     console.log(`[chat] Subscribing to chat:${chatId}`)
@@ -269,7 +278,18 @@ export function ChatClient({
           </div>
           <div>
             <p className="font-bold text-sm leading-none" style={{ color: '#1a2f45' }}>{other.username}</p>
-            {other.city && <p className="text-[10px] mt-0.5" style={{ color: '#9ab5cc' }}>{other.city}</p>}
+            <div className="flex items-center gap-2 mt-1">
+              {other.city && <span className="text-[10px] leading-none" style={{ color: '#9ab5cc' }}>{other.city}</span>}
+              {other.trades_completed > 0 ? (
+                <div className="flex items-center gap-0.5 text-yellow-500 leading-none">
+                  <Star size={10} className="fill-current inline" />
+                  <span className="text-[10px] font-bold">{(other.reputation / 20).toFixed(1)}</span>
+                  <span className="text-[9px]" style={{ color: '#9ab5cc' }}>({other.trades_completed})</span>
+                </div>
+              ) : (
+                <span className="text-[9px] italic leading-none" style={{ color: '#9ab5cc' }}>Sin canjes aún</span>
+              )}
+            </div>
           </div>
         </Link>
 

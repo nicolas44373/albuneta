@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { formatDate, getInitials } from '@/lib/utils'
-import { MessageCircle } from 'lucide-react'
+import { MessageCircle, CheckCircle2, Star } from 'lucide-react'
 import Link from 'next/link'
 
 export default async function ChatListPage() {
@@ -20,8 +20,8 @@ export default async function ChatListPage() {
         status,
         user_a,
         user_b,
-        profile_a:profiles!matches_user_a_fkey ( id, username, avatar_url ),
-        profile_b:profiles!matches_user_b_fkey ( id, username, avatar_url )
+        profile_a:profiles!matches_user_a_fkey ( id, username, avatar_url, reputation, trades_completed ),
+        profile_b:profiles!matches_user_b_fkey ( id, username, avatar_url, reputation, trades_completed )
       ),
       messages ( content, created_at, sender_id )
     `)
@@ -83,6 +83,7 @@ export default async function ChatListPage() {
           const matchArray = row.matches
           const match = (Array.isArray(matchArray) ? matchArray[0] : matchArray) as {
             user_a: string; user_b: string
+            status: string
             profile_a: any
             profile_b: any
           } | null
@@ -99,38 +100,73 @@ export default async function ChatListPage() {
             new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
           )[0]
 
+          const isCompleted = match.status === 'completed'
+
           return (
-            <Link
+            <div
               key={row.id}
-              href={`/chat/${row.id}`}
-              className="flex items-center gap-3 px-4 py-4 transition-colors border-b hover:bg-[#f8fbff]"
+              className="flex items-center justify-between gap-3 px-4 py-4 transition-colors border-b hover:bg-[#f8fbff]"
               style={{ borderColor: '#eef6fd' }}
             >
-              <div
-                className="w-12 h-12 rounded-full flex items-center justify-center text-sm font-bold shrink-0 border-2"
-                style={{ background: '#eef6fd', borderColor: '#a9d3f1', color: '#2a5f8f' }}
+              <Link
+                href={`/chat/${row.id}`}
+                className="flex items-center gap-3 flex-1 min-w-0"
               >
-                {other.avatar_url
-                  ? <img src={other.avatar_url} alt={other.username} className="w-full h-full rounded-full object-cover" />
-                  : getInitials(other.username)
-                }
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between mb-0.5">
-                  <span className="font-semibold text-sm" style={{ color: '#1a2f45' }}>{other.username}</span>
-                  {lastMsg && (
-                    <span className="text-[10px] shrink-0 ml-2" style={{ color: '#9ab5cc' }}>
-                      {formatDate(lastMsg.created_at)}
-                    </span>
-                  )}
+                <div
+                  className="w-12 h-12 rounded-full flex items-center justify-center text-sm font-bold shrink-0 border-2"
+                  style={{ background: '#eef6fd', borderColor: '#a9d3f1', color: '#2a5f8f' }}
+                >
+                  {other.avatar_url
+                    ? <img src={other.avatar_url} alt={other.username} className="w-full h-full rounded-full object-cover" />
+                    : getInitials(other.username)
+                  }
                 </div>
-                <p className="text-xs truncate" style={{ color: '#6b8caa' }}>
-                  {lastMsg
-                    ? (lastMsg.sender_id === user.id ? 'Vos: ' : '') + lastMsg.content
-                    : 'Sin mensajes todavía'}
-                </p>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5 mb-0.5">
+                    <span className="font-semibold text-sm truncate" style={{ color: '#1a2f45' }}>
+                      {other.username}
+                    </span>
+                    {other.trades_completed > 0 && (
+                      <span className="flex items-center gap-0.5 text-yellow-500 text-[10px] font-bold shrink-0">
+                        <Star size={10} className="fill-current" />
+                        {(other.reputation / 20).toFixed(1)}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs truncate" style={{ color: '#6b8caa' }}>
+                    {lastMsg
+                      ? (lastMsg.sender_id === user.id ? 'Vos: ' : '') + lastMsg.content
+                      : 'Sin mensajes todavía'}
+                  </p>
+                </div>
+              </Link>
+              
+              <div className="flex flex-col items-end gap-1.5 shrink-0 pl-2">
+                {lastMsg && (
+                  <span className="text-[10px]" style={{ color: '#9ab5cc' }}>
+                    {formatDate(lastMsg.created_at)}
+                  </span>
+                )}
+                {isCompleted ? (
+                  <span className="flex items-center gap-0.5 text-xs font-semibold shrink-0" style={{ color: '#16a34a' }}>
+                    <CheckCircle2 size={13} className="fill-current" />
+                    Completado
+                  </span>
+                ) : (
+                  <Link
+                    href={`/chat/${row.id}?complete=true`}
+                    className="px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all border shrink-0 text-center"
+                    style={{
+                      background: '#eef6fd',
+                      borderColor: '#a9d3f1',
+                      color: '#2a5f8f',
+                    }}
+                  >
+                    Completar
+                  </Link>
+                )}
               </div>
-            </Link>
+            </div>
           )
         })}
       </div>

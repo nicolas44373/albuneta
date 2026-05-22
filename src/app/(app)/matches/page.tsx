@@ -56,8 +56,18 @@ function MatchCard({ match }: { match: MatchRow }) {
               </span>
             )}
             <span className="flex items-center gap-1 text-xs" style={{ color: '#9ab5cc' }}>
-              <Star size={10} style={{ fill: '#9ab5cc' }} />
-              {match.trades_completed} canjes
+              {match.trades_completed > 0 ? (
+                <>
+                  <Star size={10} className="fill-yellow-400 text-yellow-400" />
+                  <span className="font-bold text-[#1a2f45]">{(match.reputation / 20).toFixed(1)}</span>
+                  <span>· {match.trades_completed} {match.trades_completed === 1 ? 'canje' : 'canjes'}</span>
+                </>
+              ) : (
+                <>
+                  <Star size={10} style={{ fill: '#d4e9f8', color: '#d4e9f8' }} />
+                  <span className="italic">Nuevo coleccionista</span>
+                </>
+              )}
             </span>
           </div>
         </div>

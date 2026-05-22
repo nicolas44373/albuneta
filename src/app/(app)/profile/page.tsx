@@ -38,6 +38,20 @@ export default async function ProfilePage() {
     .order('created_at', { ascending: false })
     .limit(5)
 
+  const { data: activeMatches } = await supabase
+    .from('matches')
+    .select(`
+      id,
+      status,
+      user_a,
+      user_b,
+      profile_a:profiles!matches_user_a_fkey ( id, username, avatar_url ),
+      profile_b:profiles!matches_user_b_fkey ( id, username, avatar_url ),
+      chats ( id )
+    `)
+    .or(`user_a.eq.${user.id},user_b.eq.${user.id}`)
+    .eq('status', 'accepted')
+
   const repLabel = reputationLabel(profile.reputation)
   const repColor = reputationColor(profile.reputation)
   const stars = Math.round(profile.reputation / 20)
@@ -147,6 +161,77 @@ export default async function ProfilePage() {
           <div>
             <p className="text-sm font-bold text-yellow-600">Coleccionista activo</p>
             <p className="text-xs" style={{ color: '#9ab5cc' }}>{profile.trades_completed} canjes completados</p>
+          </div>
+        </div>
+      )}
+
+      {/* Active Trades */}
+      {activeMatches && activeMatches.length > 0 && (
+        <div className="px-4 pb-6">
+          <h2
+            className="text-sm font-bold mb-3 flex items-center gap-2"
+            style={{ color: '#5b7a93' }}
+          >
+            🤝 Canjes en curso
+          </h2>
+          <div className="space-y-3">
+            {activeMatches.map((m: any) => {
+              const other = m.user_a === user.id ? m.profile_b : m.profile_a
+              if (!other) return null
+              
+              const chatObj = Array.isArray(m.chats) ? m.chats[0] : m.chats
+              const chatId = chatObj?.id
+              if (!chatId) return null
+
+              return (
+                <div
+                  key={m.id}
+                  className="flex items-center justify-between p-3 rounded-2xl border"
+                  style={{ background: 'white', borderColor: '#d4e9f8' }}
+                >
+                  <div className="flex items-center gap-3">
+                    <div
+                      className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold border shrink-0 overflow-hidden"
+                      style={{ background: '#eef6fd', borderColor: '#a9d3f1', color: '#2a5f8f' }}
+                    >
+                      {other.avatar_url ? (
+                        <img src={other.avatar_url} alt={other.username} className="w-full h-full object-cover" />
+                      ) : (
+                        getInitials(other.username)
+                      )}
+                    </div>
+                    <div>
+                      <span className="font-semibold text-sm block" style={{ color: '#1a2f45' }}>
+                        {other.username}
+                      </span>
+                      <span className="text-[10px]" style={{ color: '#9ab5cc' }}>
+                        Coordinando intercambio
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Link
+                      href={`/chat/${chatId}`}
+                      className="px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all"
+                      style={{ background: 'white', borderColor: '#d4e9f8', color: '#74ACDF' }}
+                    >
+                      Chat
+                    </Link>
+                    <Link
+                      href={`/chat/${chatId}?complete=true`}
+                      className="px-3 py-1.5 rounded-xl text-xs font-bold border transition-all"
+                      style={{
+                        background: '#eef6fd',
+                        borderColor: '#a9d3f1',
+                        color: '#2a5f8f',
+                      }}
+                    >
+                      Completar
+                    </Link>
+                  </div>
+                </div>
+              )
+            })}
           </div>
         </div>
       )}

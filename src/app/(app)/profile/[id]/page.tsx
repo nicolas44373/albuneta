@@ -1,6 +1,6 @@
 import { redirect, notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { reputationLabel, reputationColor, getInitials } from '@/lib/utils'
+import { reputationLabel, reputationColor, getInitials, formatDate } from '@/lib/utils'
 import { cn } from '@/lib/utils'
 import { ArrowLeft, Star, MapPin, MessageCircle } from 'lucide-react'
 import Link from 'next/link'
@@ -36,10 +36,10 @@ export default async function UserProfilePage({ params }: { params: Promise<{ id
 
   const { data: ratings } = await supabase
     .from('ratings')
-    .select('score, comment, created_at, rater:profiles!ratings_rater_id_fkey(username)')
+    .select('score, comment, created_at, rater:profiles!ratings_rater_id_fkey(username, avatar_url)')
     .eq('rated_id', profileId)
     .order('created_at', { ascending: false })
-    .limit(3)
+    .limit(10)
 
   const repLabel = reputationLabel(profile.reputation)
   const repColor = reputationColor(profile.reputation)
@@ -154,7 +154,7 @@ export default async function UserProfilePage({ params }: { params: Promise<{ id
           </h2>
           <div className="space-y-3">
             {ratings.map((r, i) => {
-              const rater = (Array.isArray(r.rater) ? r.rater[0] : r.rater) as { username: string } | null
+              const rater = (Array.isArray(r.rater) ? r.rater[0] : r.rater) as { username: string; avatar_url: string | null } | null
               return (
                 <div
                   key={i}
@@ -162,14 +162,26 @@ export default async function UserProfilePage({ params }: { params: Promise<{ id
                   style={{ background: 'white', borderColor: '#d4e9f8' }}
                 >
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium" style={{ color: '#1a2f45' }}>
-                      {rater?.username ?? 'Anónimo'}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <div
+                        className="w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold border shrink-0 overflow-hidden"
+                        style={{ background: '#eef6fd', borderColor: '#a9d3f1', color: '#2a5f8f' }}
+                      >
+                        {rater?.avatar_url ? (
+                          <img src={rater.avatar_url} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          getInitials(rater?.username ?? 'A')
+                        )}
+                      </div>
+                      <span className="text-sm font-medium" style={{ color: '#1a2f45' }}>
+                        {rater?.username ?? 'Anónimo'}
+                      </span>
+                    </div>
                     <div className="flex items-center gap-0.5">
                       {Array.from({ length: 5 }).map((_, si) => (
                         <Star
                           key={si}
-                          size={12}
+                          size={11}
                           className={cn(si < r.score ? 'fill-yellow-400 text-yellow-400' : '')}
                           style={si >= r.score ? { fill: '#d4e9f8', color: '#d4e9f8' } : undefined}
                         />
@@ -177,8 +189,13 @@ export default async function UserProfilePage({ params }: { params: Promise<{ id
                     </div>
                   </div>
                   {r.comment && (
-                    <p className="text-xs" style={{ color: '#6b8caa' }}>"{r.comment}"</p>
+                    <p className="text-xs italic pl-8" style={{ color: '#6b8caa' }}>
+                      "{r.comment}"
+                    </p>
                   )}
+                  <div className="text-[9px] text-right pl-8" style={{ color: '#9ab5cc' }}>
+                    {formatDate(r.created_at)}
+                  </div>
                 </div>
               )
             })}

@@ -333,7 +333,7 @@ export default function MapClient() {
       html: iconHtml,
       className: 'custom-kiosk-marker',
       iconSize: [42, 42],
-      iconAnchor: [21, 21],
+      iconAnchor: [21, 35],
     })
   }
 
