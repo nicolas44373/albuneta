@@ -91,6 +91,44 @@ const PROVINCE_CAPITALS: Record<string, { lat: number; lng: number }> = {
 
 const supabase = createClient()
 
+async function geocodeAddress(address: string, city: string, province: string): Promise<{ lat: number; lng: number } | null> {
+  try {
+    const params = new URLSearchParams({
+      street: address,
+      city: city,
+      state: province,
+      country: 'Argentina',
+      format: 'json',
+      limit: '1',
+      countrycodes: 'ar',
+    })
+    const res = await fetch(`https://nominatim.openstreetmap.org/search?${params}`, {
+      headers: { 'User-Agent': 'Albuneta/1.0 (albuneta.com)' }
+    })
+    const data = await res.json()
+    if (data && data.length > 0) {
+      return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) }
+    }
+    // Fallback: free-form query
+    const fallbackParams = new URLSearchParams({
+      q: `${address}, ${city}, ${province}, Argentina`,
+      format: 'json',
+      limit: '1',
+      countrycodes: 'ar',
+    })
+    const res2 = await fetch(`https://nominatim.openstreetmap.org/search?${fallbackParams}`, {
+      headers: { 'User-Agent': 'Albuneta/1.0 (albuneta.com)' }
+    })
+    const data2 = await res2.json()
+    if (data2 && data2.length > 0) {
+      return { lat: parseFloat(data2[0].lat), lng: parseFloat(data2[0].lon) }
+    }
+  } catch (err) {
+    console.error('Geocoding error:', err)
+  }
+  return null
+}
+
 export default function MapClient() {
   const mapContainerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<L.Map | null>(null)
@@ -457,14 +495,17 @@ export default function MapClient() {
     setIsSubmitting(true)
 
     try {
+      const geocoded = await geocodeAddress(reportAddress.trim(), reportCity.trim(), reportProvince)
+      const coords = geocoded ?? selectedCoords
+
       const { data: { user } } = await supabase.auth.getUser()
       const newKiosk = {
         name: reportName.trim(),
         address: reportAddress.trim(),
         province: reportProvince,
         city: reportCity.trim(),
-        lat: selectedCoords.lat,
-        lng: selectedCoords.lng,
+        lat: coords.lat,
+        lng: coords.lng,
         packet_price: reportPacketPrice ? parseFloat(reportPacketPrice) : null,
         album_price: reportAlbumPrice ? parseFloat(reportAlbumPrice) : null,
         has_stock: reportHasStock,
@@ -823,7 +864,7 @@ export default function MapClient() {
 
             <form onSubmit={handleReportKiosk} className="space-y-4">
               <p className="text-[10px] text-[#5b7a93] leading-relaxed font-semibold">
-                Punto marcado: <span className="font-mono bg-slate-100 px-1 py-0.5 rounded">{selectedCoords.lat.toFixed(5)}, {selectedCoords.lng.toFixed(5)}</span>
+                La ubicación exacta se calculará automáticamente desde la dirección ingresada.
               </p>
 
               {/* Name */}
@@ -944,7 +985,10 @@ export default function MapClient() {
                   }}
                 >
                   {isSubmitting ? (
-                    <Loader2 size={16} className="animate-spin" />
+                    <>
+                      <Loader2 size={16} className="animate-spin" />
+                      <span>Verificando ubicación...</span>
+                    </>
                   ) : (
                     'Confirmar Local'
                   )}
