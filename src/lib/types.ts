@@ -3,6 +3,7 @@ export type Profile = {
   username: string
   avatar_url: string | null
   city: string | null
+  province: string | null
   reputation: number
   trades_completed: number
   created_at: string

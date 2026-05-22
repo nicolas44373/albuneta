@@ -2,19 +2,22 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { BookOpen, CalendarDays, Zap, MessageCircle, User } from 'lucide-react'
+import { BookOpen, CalendarDays, Zap, Map, MessageCircle, User } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useRealtimeNotifications } from '@/context/RealtimeNotificationContext'
 
 const links = [
   { href: '/album',   label: 'Álbum',  icon: BookOpen },
   { href: '/fixture', label: 'Fixture', icon: CalendarDays },
   { href: '/matches', label: 'Matches', icon: Zap },
+  { href: '/map',     label: 'Mapa',    icon: Map },
   { href: '/chat',    label: 'Chat',    icon: MessageCircle },
   { href: '/profile', label: 'Perfil',  icon: User },
 ]
 
 export function NavBar() {
   const pathname = usePathname()
+  const { unreadChatIds } = useRealtimeNotifications()
 
   return (
     <nav
@@ -33,15 +36,18 @@ export function NavBar() {
         }}
       />
 
-      <div className="flex items-center justify-around max-w-lg mx-auto h-16 px-3">
+      <div className="flex items-center justify-around max-w-lg mx-auto h-16 px-2">
         {links.map(({ href, label, icon: Icon }) => {
           const active = pathname.startsWith(href)
+          const isChat = href === '/chat'
+          const hasUnread = isChat && unreadChatIds.length > 0
+
           return (
             <Link
               key={href}
               href={href}
               className={cn(
-                'relative flex flex-col items-center justify-center gap-1 w-14 h-12 rounded-xl transition-all duration-300 select-none',
+                'relative flex flex-col items-center justify-center gap-0.5 w-11 h-12 rounded-xl transition-all duration-300 select-none',
                 active
                   ? 'scale-105 font-bold text-[#2a5f8f]'
                   : 'text-[#5b7a93] hover:text-[#2a5f8f] hover:scale-102'
@@ -56,15 +62,23 @@ export function NavBar() {
                   }}
                 />
               )}
-              <Icon
-                size={20}
-                strokeWidth={active ? 2.5 : 2.0}
-                className="transition-transform duration-300"
-                style={active ? { filter: 'drop-shadow(0 0 6px rgba(116,172,223,0.45))', color: '#74ACDF' } : undefined}
-              />
+              <div className="relative">
+                <Icon
+                  size={18}
+                  strokeWidth={active ? 2.5 : 2.0}
+                  className="transition-transform duration-300"
+                  style={active ? { filter: 'drop-shadow(0 0 6px rgba(116,172,223,0.45))', color: '#74ACDF' } : undefined}
+                />
+                {hasUnread && (
+                  <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500 border border-white"></span>
+                  </span>
+                )}
+              </div>
               <span
                 className={cn(
-                  'text-[9px] tracking-wide transition-colors leading-none',
+                  'text-[8px] tracking-wide transition-colors leading-none mt-1',
                   active ? 'font-black text-[#1a2f45]' : 'font-semibold text-[#5b7a93]'
                 )}
               >

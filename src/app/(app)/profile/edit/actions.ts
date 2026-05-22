@@ -7,6 +7,7 @@ export async function updateProfileAction(
 ): Promise<{ error: string } | void> {
   const username = (formData.get('username') as string).trim()
   const city     = (formData.get('city') as string).trim() || null
+  const province = (formData.get('province') as string).trim() || null
 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -24,7 +25,7 @@ export async function updateProfileAction(
 
   const { error } = await supabase
     .from('profiles')
-    .update({ username, city })
+    .update({ username, city, province })
     .eq('id', user.id)
 
   if (error) return { error: error.message }

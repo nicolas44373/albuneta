@@ -54,6 +54,10 @@ export default async function ChatPage({ params }: { params: Promise<{ id: strin
     .eq('chat_id', chatId)
     .order('created_at', { ascending: true })
 
+  console.log('--- DEBUG MESSAGES ---')
+  console.log('currentUserId:', user.id)
+  console.log('messages:', JSON.stringify(messages, null, 2))
+
   const isUserA = match.user_a === user.id
   const other = isUserA ? profileB : profileA
 

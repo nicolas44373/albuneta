@@ -90,10 +90,12 @@ export default async function UserProfilePage({ params }: { params: Promise<{ id
               ))}
               <span className="text-xs ml-1">{repLabel}</span>
             </div>
-            {profile.city && (
+            {(profile.city || profile.province) && (
               <div className="flex items-center gap-1 mt-1.5 text-xs" style={{ color: '#9ab5cc' }}>
                 <MapPin size={11} />
-                {profile.city}
+                {profile.city && profile.province
+                  ? `${profile.city}, ${profile.province}`
+                  : profile.city || profile.province}
               </div>
             )}
           </div>

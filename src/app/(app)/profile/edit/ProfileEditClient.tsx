@@ -8,12 +8,41 @@ import { updateProfileAction } from './actions'
 type ProfileData = {
   username: string
   city: string | null
+  province: string | null
   avatar_url: string | null
 }
+
+const ARG_PROVINCES = [
+  'Buenos Aires',
+  'CABA',
+  'Catamarca',
+  'Chaco',
+  'Chubut',
+  'Córdoba',
+  'Corrientes',
+  'Entre Ríos',
+  'Formosa',
+  'Jujuy',
+  'La Pampa',
+  'La Rioja',
+  'Mendoza',
+  'Misiones',
+  'Neuquén',
+  'Río Negro',
+  'Salta',
+  'San Juan',
+  'San Luis',
+  'Santa Cruz',
+  'Santa Fe',
+  'Santiago del Estero',
+  'Tierra del Fuego',
+  'Tucumán'
+]
 
 export function ProfileEditClient({ profile }: { profile: ProfileData }) {
   const [username, setUsername] = useState(profile.username)
   const [city, setCity]         = useState(profile.city ?? '')
+  const [province, setProvince] = useState(profile.province ?? '')
   const [error, setError]       = useState<string | null>(null)
   const [saved, setSaved]       = useState(false)
   const [isPending, startTransition] = useTransition()
@@ -40,6 +69,7 @@ export function ProfileEditClient({ profile }: { profile: ProfileData }) {
       const form = new FormData()
       form.set('username', username.trim())
       form.set('city', city.trim())
+      form.set('province', province.trim())
       const result = await updateProfileAction(form)
       if (result?.error) setError(result.error)
       else setSaved(true)
@@ -89,6 +119,27 @@ export function ProfileEditClient({ profile }: { profile: ProfileData }) {
           />
           <p className="text-xs" style={{ color: '#9ab5cc' }}>
             Solo letras, números, guiones y puntos. Mínimo 3 caracteres.
+          </p>
+        </div>
+
+        {/* Province */}
+        <div className="space-y-2">
+          <label className="text-sm font-semibold" style={{ color: '#1a2f45' }}>
+            Provincia <span style={{ color: '#9ab5cc', fontWeight: 400 }}>(opcional)</span>
+          </label>
+          <select
+            value={province}
+            onChange={e => setProvince(e.target.value)}
+            className="w-full h-12 px-4 rounded-xl text-sm focus:outline-none transition-colors bg-white border border-[#d4e9f8]"
+            style={{ color: '#1a2f45', background: '#f8fbff', borderColor: '#d4e9f8' }}
+          >
+            <option value="">Selecciona tu provincia...</option>
+            {ARG_PROVINCES.map(p => (
+              <option key={p} value={p}>{p}</option>
+            ))}
+          </select>
+          <p className="text-xs" style={{ color: '#9ab5cc' }}>
+            Te emparejaremos solo con coleccionistas de tu misma provincia.
           </p>
         </div>
 

@@ -357,6 +357,7 @@ export function ChatClient({
         {messages.map((msg, i) => {
           const senderId = msg.sender_id || (Array.isArray(msg.sender) ? msg.sender[0]?.id : msg.sender?.id)
           const isMe = !!currentUserId && !!senderId && senderId === currentUserId
+
           const prevMsg = messages[i - 1]
           const showTime = !prevMsg ||
             new Date(msg.created_at).getTime() - new Date(prevMsg.created_at).getTime() > 5 * 60 * 1000

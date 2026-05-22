@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { ALBUM_ID, ALL_STICKERS, WC2026_GROUPS } from '@/data/wc2026'
 import type { Sticker } from '@/lib/types'
 import { cn } from '@/lib/utils'
-import { Search, X, Plus, Minus, Sparkles } from 'lucide-react'
+import { Search, X, Plus, Minus, Sparkles, HelpCircle, MapPin, MessageCircle, Star, ChevronLeft, ChevronRight } from 'lucide-react'
 
 type Status = 'have' | 'need' | null
 type StatusMap = Map<string, { status: Status; quantity: number }>
@@ -210,6 +210,8 @@ export default function AlbumPage() {
   const [saveError, setSaveError]   = useState<string | null>(null)
   const [filter, setFilter]         = useState<FilterTab>('all')
   const [search, setSearch]         = useState('')
+  const [showTutorial, setShowTutorial] = useState(false)
+  const [tutorialStep, setTutorialStep] = useState(0)
 
   // Modals status
   const [activeSection, setActiveSection] = useState<{
@@ -386,11 +388,20 @@ export default function AlbumPage() {
                 className="text-lg font-black leading-none"
                 style={{ fontFamily: 'var(--font-baloo2), system-ui', color: '#1a2f45' }}
               >
-                FIFA World Cup 2026
+                LA ALBUNETA PAPA 2026
               </h1>
-              <span className="text-sm tracking-wider text-[#F5B700]">★★★</span>
+              <button
+                onClick={() => {
+                  setTutorialStep(0)
+                  setShowTutorial(true)
+                }}
+                className="flex items-center gap-0.5 text-[10px] font-black text-[#2a5f8f] bg-[#eef6fd] px-2 py-0.5 rounded-full border border-[#d4e9f8] hover:bg-[#74ACDF] hover:text-white transition-all select-none active:scale-95 cursor-pointer"
+              >
+                <HelpCircle size={10} />
+                <span>¿Cómo funciona?</span>
+              </button>
             </div>
-            <p className="text-[11px] mt-0.5 font-bold text-[#5b7a93]">
+            <p className="text-[11px] mt-1 font-bold text-[#5b7a93]">
               Álbum Panini oficial · {stats.total} figuritas
             </p>
           </div>
@@ -595,7 +606,7 @@ export default function AlbumPage() {
       {activeSection && (
         <div className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm flex flex-col justify-end sm:justify-center items-center px-0 sm:px-4">
           <div
-            className="w-full sm:max-w-md h-[90vh] sm:h-[80vh] bg-white rounded-t-3xl sm:rounded-3xl flex flex-col overflow-hidden shadow-2xl border"
+            className="w-full sm:max-w-md h-[90vh] sm:h-[80vh] bg-white rounded-t-3xl sm:rounded-3xl flex flex-col overflow-hidden shadow-2xl border animate-sheet-in sm:animate-modal-in"
             style={{ borderColor: '#d4e9f8' }}
           >
             {/* Modal Header */}
@@ -718,9 +729,9 @@ export default function AlbumPage() {
 
       {/* ── Sub-modal / Sheet for Sticker Details ── */}
       {detailSticker && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm px-4 pb-10">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
           <div
-            className="w-full max-w-sm rounded-3xl p-6 space-y-6 border shadow-2xl bg-white animate-slide-up"
+            className="w-full max-w-sm rounded-3xl p-6 space-y-6 border shadow-2xl bg-white animate-modal-in"
             style={{ borderColor: '#d4e9f8' }}
           >
             <div className="flex items-start justify-between">
@@ -840,6 +851,203 @@ export default function AlbumPage() {
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Onboarding / Graphic Tutorial Modal ── */}
+      {showTutorial && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex flex-col justify-end sm:justify-center items-center px-0 sm:px-4 animate-fade-in">
+          <div
+            className="w-full sm:max-w-md bg-white rounded-t-3xl sm:rounded-3xl flex flex-col overflow-hidden shadow-2xl border animate-sheet-in sm:animate-modal-in max-h-[90vh]"
+            style={{ borderColor: '#d4e9f8' }}
+          >
+            {/* Header */}
+            <div
+              className="px-5 pt-5 pb-4 border-b flex items-center justify-between shrink-0"
+              style={{ background: '#f8fbff', borderColor: '#e8f4fd' }}
+            >
+              <div className="flex items-center gap-2 text-[#2a5f8f]">
+                <HelpCircle size={18} />
+                <h3 className="font-extrabold text-sm text-[#1a2f45]">Guía de Uso Albuneta</h3>
+              </div>
+              <button
+                onClick={() => setShowTutorial(false)}
+                className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 transition-colors"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Content Body */}
+            <div className="flex-1 overflow-y-auto p-5 space-y-5 flex flex-col justify-between">
+              
+              {/* Graphic Representation Area */}
+              <div className="flex-1 min-h-[160px] max-h-[220px] bg-[#f8fbfe] border border-[#d4e9f8] rounded-2xl flex items-center justify-center p-4 relative overflow-hidden select-none">
+                
+                {tutorialStep === 0 && (
+                  <div className="flex flex-col items-center gap-3 animate-fade-in">
+                    {/* Sticker card mockup */}
+                    <div className="w-24 h-32 rounded-xl border-2 border-emerald-400 bg-emerald-50/50 flex flex-col justify-between p-2 relative shadow-md">
+                      <div className="flex justify-between items-center">
+                        <span className="text-[8px] font-black bg-[#eef6fd] border border-[#d4e9f8] px-1 py-0.5 rounded text-[#2a5f8f]">10</span>
+                        <span className="text-[8px] font-black bg-emerald-500 text-white px-1 rounded">x3</span>
+                      </div>
+                      <div className="text-center text-[10px] font-black text-slate-800 leading-tight">Lionel Messi</div>
+                      <div className="text-[7px] text-center font-bold text-slate-500 uppercase">Argentina</div>
+                      <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[9px] font-bold shadow">✓</span>
+                    </div>
+                    {/* Button mockup controls */}
+                    <div className="flex gap-2">
+                      <span className="px-2 py-0.5 text-[9px] font-bold rounded-lg border border-[#fdba74] bg-[#fff7ed] text-[#d97706]">Falta</span>
+                      <span className="px-2 py-0.5 text-[9px] font-bold rounded-lg border border-emerald-400 bg-[#f0fdf4] text-emerald-600">Tengo</span>
+                      <span className="px-1.5 py-0.5 text-[9px] font-bold rounded-lg border border-slate-200 bg-white text-slate-400">+ / - Repetidas</span>
+                    </div>
+                  </div>
+                )}
+
+                {tutorialStep === 1 && (
+                  <div className="w-full max-w-[280px] space-y-3 animate-fade-in flex flex-col justify-center">
+                    {/* User Profile Card Mockup */}
+                    <div className="bg-white border border-[#a9d3f1] rounded-2xl p-3 flex items-center gap-3 shadow-md relative">
+                      <div className="w-9 h-9 rounded-full bg-[#eef6fd] border border-[#a9d3f1] flex items-center justify-center text-xs font-black text-[#2a5f8f]">
+                        JP
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[11px] font-black text-[#1a2f45] leading-none">Juan Pérez</p>
+                        <p className="text-[9px] font-bold text-[#74ACDF] flex items-center gap-0.5 mt-1">
+                          <MapPin size={10} />
+                          <span>Rosario, Santa Fe</span>
+                        </p>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <span className="text-xs font-black text-[#16a34a] bg-[#f0fdf4] border border-[#bbf7d0] px-2 py-0.5 rounded-full">
+                          Match 85%
+                        </span>
+                      </div>
+                    </div>
+                    {/* Info indicator */}
+                    <div className="text-[9px] font-bold text-center text-[#5b7a93] bg-white border border-dashed border-slate-200 rounded-lg p-1.5">
+                      📍 Filtrado automático por Provincia para canjes físicos.
+                    </div>
+                  </div>
+                )}
+
+                {tutorialStep === 2 && (
+                  <div className="w-full max-w-[280px] space-y-2.5 animate-fade-in flex flex-col justify-center">
+                    {/* Chat Bubble Mockup */}
+                    <div className="space-y-1.5">
+                      <div className="flex justify-start">
+                        <div className="bg-[#f1f5f9] text-slate-800 text-[10px] font-semibold px-3 py-1.5 rounded-2xl rounded-tl-none max-w-[80%] shadow-sm">
+                          ¡Hola! Tengo a Di María duplicado.
+                        </div>
+                      </div>
+                      <div className="flex justify-end">
+                        <div className="bg-[#74ACDF] text-white text-[10px] font-semibold px-3 py-1.5 rounded-2xl rounded-tr-none max-w-[80%] shadow-sm">
+                          ¡Qué bueno! Yo tengo a De Paul para vos.
+                        </div>
+                      </div>
+                    </div>
+                    {/* Star Rating Mockup */}
+                    <div className="flex items-center justify-center gap-1.5 bg-white border border-[#d4e9f8] p-1.5 rounded-xl shadow-xs">
+                      <span className="text-[9px] font-extrabold text-[#5b7a93]">Valorar:</span>
+                      <div className="flex text-[#F5B700]">
+                        <Star size={12} fill="#F5B700" />
+                        <Star size={12} fill="#F5B700" />
+                        <Star size={12} fill="#F5B700" />
+                        <Star size={12} fill="#F5B700" />
+                        <Star size={12} fill="#F5B700" />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {tutorialStep === 3 && (
+                  <div className="w-full max-w-[280px] space-y-2.5 animate-fade-in flex flex-col justify-center items-center">
+                    {/* Map marker detail box */}
+                    <div className="bg-white border border-[#a9d3f1] rounded-2xl p-3 shadow-md w-56 flex flex-col gap-1 text-[10px]">
+                      <div className="flex items-center justify-between border-b pb-1.5 mb-1">
+                        <span className="font-extrabold text-slate-800">Kiosco El Trébol 📍</span>
+                        <span className="text-[9px] font-black text-[#10b981] bg-[#ecfdf5] border border-[#a7f3d0] px-1.5 py-0.2 rounded-full">
+                          Con Stock
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Paquete de Figuritas:</span>
+                        <span className="font-extrabold text-[#2a5f8f]">$1200</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Álbum de Tapa Blanda:</span>
+                        <span className="font-extrabold text-[#2a5f8f]">$5000</span>
+                      </div>
+                    </div>
+                    <span className="text-[8px] font-black text-center text-[#74ACDF] bg-[#eef6fd] px-2 py-0.5 rounded border border-[#d4e9f8]">
+                      🗺️ Tocá el mapa en cualquier parte para registrar un nuevo kiosco.
+                    </span>
+                  </div>
+                )}
+
+              </div>
+
+              {/* Slide text details */}
+              <div className="space-y-2 text-center pt-2">
+                <h4 className="text-base font-black text-[#1a2f45]">
+                  {tutorialStep === 0 && '1. Marcá tu Álbum'}
+                  {tutorialStep === 1 && '2. Matches por Provincia'}
+                  {tutorialStep === 2 && '3. Chat y Reputación'}
+                  {tutorialStep === 3 && '4. Mapa de Kioscos en vivo'}
+                </h4>
+                <p className="text-xs text-[#5b7a93] leading-relaxed px-2 min-h-[50px]">
+                  {tutorialStep === 0 && 'Marcá qué figuritas tenés o necesitás de cada país. Si te sale repetida, aumentá la cantidad con los botones (+) y (-) para habilitar el intercambio automático.'}
+                  {tutorialStep === 1 && 'Para asegurar que los intercambios se puedan realizar físicamente, filtramos los matches automáticamente por tu Provincia. ¡Recordá configurar tu Provincia en tu Perfil!'}
+                  {tutorialStep === 2 && 'Una vez que tengas un match de intercambio, abrí un chat privado para coordinar el encuentro. Al finalizar, calificalo para sumar estrellas de buena conducta a su reputación.'}
+                  {tutorialStep === 3 && 'Consultá el mapa para ver qué kioscos cercanos tienen stock y a qué precio venden. ¿Encontraste un local que no figura? Tocá en el mapa para reportarlo y ayudar a todos.'}
+                </p>
+              </div>
+
+              {/* Progress Dots */}
+              <div className="flex justify-center gap-1.5 py-1">
+                {[0, 1, 2, 3].map((s) => (
+                  <span
+                    key={s}
+                    className={`h-2 rounded-full transition-all duration-300 ${
+                      tutorialStep === s ? 'w-5 bg-[#74ACDF]' : 'w-2 bg-slate-200'
+                    }`}
+                  />
+                ))}
+              </div>
+
+            </div>
+
+            {/* Footer buttons */}
+            <div className="p-4 border-t bg-white flex items-center justify-between shrink-0" style={{ borderColor: '#e8f4fd' }}>
+              <button
+                disabled={tutorialStep === 0}
+                onClick={() => setTutorialStep((prev) => prev - 1)}
+                className="flex items-center gap-1 px-4 h-10 rounded-xl text-xs font-black border transition-colors disabled:opacity-30 cursor-pointer text-[#5b7a93] border-slate-200"
+              >
+                <ChevronLeft size={14} />
+                <span>Anterior</span>
+              </button>
+
+              {tutorialStep < 3 ? (
+                <button
+                  onClick={() => setTutorialStep((prev) => prev + 1)}
+                  className="flex items-center gap-1 px-5 h-10 rounded-xl text-xs font-black bg-[#74ACDF] text-white transition-all active:scale-95 cursor-pointer"
+                  style={{ boxShadow: '0 2px 10px rgba(116,172,223,0.3)' }}
+                >
+                  <span>Siguiente</span>
+                  <ChevronRight size={14} />
+                </button>
+              ) : (
+                <button
+                  onClick={() => setShowTutorial(false)}
+                  className="px-6 h-10 rounded-xl text-xs font-black bg-emerald-500 text-white transition-all active:scale-95 cursor-pointer shadow-md"
+                >
+                  ¡Empezar a cambiar!
+                </button>
+              )}
+            </div>
           </div>
         </div>
       )}

@@ -11,6 +11,7 @@ type MatchRow = {
   username: string
   avatar_url: string | null
   city: string | null
+  province: string | null
   reputation: number
   trades_completed: number
   stickers_i_give: number[]
@@ -46,10 +47,12 @@ function MatchCard({ match }: { match: MatchRow }) {
             <span className={cn('text-xs font-medium shrink-0', repColor)}>{repLabel}</span>
           </div>
           <div className="flex items-center gap-3 mt-0.5">
-            {match.city && (
+            {(match.city || match.province) && (
               <span className="flex items-center gap-1 text-xs" style={{ color: '#9ab5cc' }}>
                 <MapPin size={10} />
-                {match.city}
+                {match.city && match.province
+                  ? `${match.city}, ${match.province}`
+                  : match.city || match.province}
               </span>
             )}
             <span className="flex items-center gap-1 text-xs" style={{ color: '#9ab5cc' }}>
