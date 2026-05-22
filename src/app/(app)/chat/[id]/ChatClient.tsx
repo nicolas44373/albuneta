@@ -124,6 +124,8 @@ function RatingModal({
   )
 }
 
+const supabase = createClient()
+
 export function ChatClient({
   chatId,
   matchId,
@@ -143,7 +145,6 @@ export function ChatClient({
   stickersIReceive: number[]
   initialMessages: MsgWithSender[]
 }) {
-  const supabase = createClient()
   const [messages, setMessages]     = useState<MsgWithSender[]>(initialMessages)
   const [text, setText]             = useState('')
   const [sending, setSending]       = useState(false)
@@ -153,23 +154,38 @@ export function ChatClient({
   const bottomRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
+    console.log(`[chat] Subscribing to chat:${chatId}`)
     const channel = supabase
       .channel(`chat:${chatId}`)
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'messages', filter: `chat_id=eq.${chatId}` },
-        async (payload) => {
-          const { data: sender } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', payload.new.sender_id)
-            .single()
-          setMessages(prev => [...prev, { ...payload.new, sender } as MsgWithSender])
+        (payload) => {
+          const newMsg = payload.new as Message
+          console.log('[chat] Realtime message received:', newMsg)
+          
+          setMessages(prev => {
+            // Evitar duplicados si el mensaje ya fue agregado por la UI optimista
+            if (prev.some(m => m.id === newMsg.id)) {
+              return prev
+            }
+            
+            // Asignar el perfil del remitente localmente sin hacer consulta extra a la base de datos
+            const isMe = newMsg.sender_id === currentUserId
+            const sender = isMe ? { id: currentUserId, username: 'Vos', avatar_url: null } : other
+            return [...prev, { ...newMsg, sender } as MsgWithSender]
+          })
         }
       )
-      .subscribe()
-    return () => { supabase.removeChannel(channel) }
-  }, [chatId])
+      .subscribe((status, err) => {
+        console.log(`[chat] Realtime connection status: ${status}`, err || '')
+      })
+
+    return () => {
+      console.log(`[chat] Unsubscribing from chat:${chatId}`)
+      supabase.removeChannel(channel)
+    }
+  }, [chatId, other, currentUserId])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -181,12 +197,40 @@ export function ChatClient({
     if (!content || sending) return
     setSending(true)
     setText('')
-    const { error } = await supabase
+
+    // Crear un mensaje temporal para la UI optimista (respuesta instantánea)
+    const tempId = `temp-${Date.now()}`
+    const tempMsg: MsgWithSender = {
+      id: tempId,
+      chat_id: chatId,
+      sender_id: currentUserId,
+      content,
+      created_at: new Date().toISOString(),
+      sender: { id: currentUserId, username: 'Vos', avatar_url: null } as any
+    }
+
+    // Agregar mensaje a la lista local inmediatamente
+    setMessages(prev => [...prev, tempMsg])
+
+    // Insertar en la base de datos y retornar el registro insertado real
+    const { data, error } = await supabase
       .from('messages')
       .insert({ chat_id: chatId, sender_id: currentUserId, content })
+      .select()
+
     if (error) {
       console.error('[chat] Error sending message:', error)
+      // Si falló, quitamos el mensaje temporal para informar el error
+      setMessages(prev => prev.filter(m => m.id !== tempId))
+    } else if (data && data.length > 0) {
+      const realMsg = data[0]
+      // Reemplazar el temporal por el real que tiene el ID y created_at final de la base de datos
+      setMessages(prev => prev.map(m => m.id === tempId ? { ...realMsg, sender: tempMsg.sender } : m))
+    } else {
+      // Fallback por si select() no devolvió datos pero insertó
+      setMessages(prev => prev.map(m => m.id === tempId ? { ...m, id: `real-${Date.now()}` } : m))
     }
+
     setSending(false)
   }
 

@@ -86,6 +86,8 @@ export default async function ChatListPage() {
           if (!match) return null
 
           const other = match.user_a === user.id ? match.profile_b : match.profile_a
+          if (!other) return null
+
           const messages = (row.messages as { content: string; created_at: string; sender_id: string }[]) ?? []
           const lastMsg = messages.sort((a, b) =>
             new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
