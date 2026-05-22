@@ -31,7 +31,10 @@ export async function GET(request: NextRequest) {
     if (!error) {
       return response
     }
+    return NextResponse.redirect(
+      `${origin}/auth/login?error=${encodeURIComponent(error.message)}`
+    )
   }
 
-  return NextResponse.redirect(`${origin}/auth/login?error=callback_failed`)
+  return NextResponse.redirect(`${origin}/auth/login?error=No+se+recibio+el+codigo+de+autenticacion`)
 }
