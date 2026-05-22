@@ -30,18 +30,23 @@ export default async function ChatPage({ params }: { params: Promise<{ id: strin
 
   if (!chat) notFound()
 
-  const match = chat.matches as {
+  const matchArray = chat.matches
+  const matchObj = Array.isArray(matchArray) ? matchArray[0] : matchArray
+  const match = matchObj as {
     id: string
     status: string
     user_a: string
     user_b: string
     stickers_a_to_b: number[]
     stickers_b_to_a: number[]
-    profile_a: Profile
-    profile_b: Profile
+    profile_a: any
+    profile_b: any
   } | null
 
-  if (!match || (match.user_a !== user.id && match.user_b !== user.id)) notFound()
+  const profileA = match ? (Array.isArray(match.profile_a) ? match.profile_a[0] : match.profile_a) as Profile : null
+  const profileB = match ? (Array.isArray(match.profile_b) ? match.profile_b[0] : match.profile_b) as Profile : null
+
+  if (!match || !profileA || !profileB || (match.user_a !== user.id && match.user_b !== user.id)) notFound()
 
   const { data: messages } = await supabase
     .from('messages')
@@ -50,7 +55,7 @@ export default async function ChatPage({ params }: { params: Promise<{ id: strin
     .order('created_at', { ascending: true })
 
   const isUserA = match.user_a === user.id
-  const other = isUserA ? match.profile_b : match.profile_a
+  const other = isUserA ? profileB : profileA
 
   // What I give and receive from this match
   const stickersIGive    = isUserA ? (match.stickers_a_to_b ?? []) : (match.stickers_b_to_a ?? [])

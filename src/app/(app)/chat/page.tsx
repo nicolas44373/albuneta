@@ -30,11 +30,10 @@ export default async function ChatListPage() {
     console.error('[chat] Error fetching chats:', error)
   }
 
-  type ChatRow = typeof rows extends (infer T)[] | null ? T : never
-
-  const chats = (rows ?? []).filter((row: ChatRow) => {
-    const m = row.matches as { user_a: string; user_b: string } | null
-    return m && (m.user_a === user.id || m.user_b === user.id)
+  const chats = (rows ?? []).filter((row: any) => {
+    const matchArray = row.matches
+    const match = (Array.isArray(matchArray) ? matchArray[0] : matchArray) as { user_a: string; user_b: string } | null
+    return match && (match.user_a === user.id || match.user_b === user.id)
   })
 
   return (
@@ -80,16 +79,20 @@ export default async function ChatListPage() {
           </div>
         )}
 
-        {chats.map((row: ChatRow) => {
-          const match = row.matches as {
+        {chats.map((row: any) => {
+          const matchArray = row.matches
+          const match = (Array.isArray(matchArray) ? matchArray[0] : matchArray) as {
             user_a: string; user_b: string
-            profile_a: { id: string; username: string; avatar_url: string | null }
-            profile_b: { id: string; username: string; avatar_url: string | null }
+            profile_a: any
+            profile_b: any
           } | null
           if (!match) return null
 
-          const other = match.user_a === user.id ? match.profile_b : match.profile_a
-          if (!other) return null
+          const profileA = Array.isArray(match.profile_a) ? match.profile_a[0] : match.profile_a
+          const profileB = Array.isArray(match.profile_b) ? match.profile_b[0] : match.profile_b
+          if (!profileA || !profileB) return null
+
+          const other = match.user_a === user.id ? profileB : profileA
 
           const messages = (row.messages as { content: string; created_at: string; sender_id: string }[]) ?? []
           const lastMsg = messages.sort((a, b) =>

@@ -165,13 +165,22 @@ export function ChatClient({
           console.log('[chat] Realtime message received:', newMsg)
           
           setMessages(prev => {
-            // Evitar duplicados si el mensaje ya fue agregado por la UI optimista
+            // Evitar duplicados por ID
             if (prev.some(m => m.id === newMsg.id)) {
               return prev
             }
             
-            // Asignar el perfil del remitente localmente sin hacer consulta extra a la base de datos
             const isMe = newMsg.sender_id === currentUserId
+            
+            // Si el mensaje es mío, e ingresa por realtime pero todavía tenemos el tempMsg de la inserción local
+            if (isMe) {
+              const hasTemp = prev.some(m => m.id.startsWith('temp-') && m.content === newMsg.content)
+              if (hasTemp) {
+                // Reemplazamos el temporal con el real de realtime
+                return prev.map(m => m.id.startsWith('temp-') && m.content === newMsg.content ? { ...newMsg, sender: m.sender } : m)
+              }
+            }
+
             const sender = isMe ? { id: currentUserId, username: 'Vos', avatar_url: null } : other
             return [...prev, { ...newMsg, sender } as MsgWithSender]
           })
@@ -198,7 +207,7 @@ export function ChatClient({
     setSending(true)
     setText('')
 
-    // Crear un mensaje temporal para la UI optimista (respuesta instantánea)
+    // Crear un mensaje temporal para la UI optimista
     const tempId = `temp-${Date.now()}`
     const tempMsg: MsgWithSender = {
       id: tempId,
@@ -209,10 +218,9 @@ export function ChatClient({
       sender: { id: currentUserId, username: 'Vos', avatar_url: null } as any
     }
 
-    // Agregar mensaje a la lista local inmediatamente
     setMessages(prev => [...prev, tempMsg])
 
-    // Insertar en la base de datos y retornar el registro insertado real
+    // Insertar en la base de datos
     const { data, error } = await supabase
       .from('messages')
       .insert({ chat_id: chatId, sender_id: currentUserId, content })
@@ -220,14 +228,11 @@ export function ChatClient({
 
     if (error) {
       console.error('[chat] Error sending message:', error)
-      // Si falló, quitamos el mensaje temporal para informar el error
       setMessages(prev => prev.filter(m => m.id !== tempId))
     } else if (data && data.length > 0) {
       const realMsg = data[0]
-      // Reemplazar el temporal por el real que tiene el ID y created_at final de la base de datos
       setMessages(prev => prev.map(m => m.id === tempId ? { ...realMsg, sender: tempMsg.sender } : m))
     } else {
-      // Fallback por si select() no devolvió datos pero insertó
       setMessages(prev => prev.map(m => m.id === tempId ? { ...m, id: `real-${Date.now()}` } : m))
     }
 
@@ -350,28 +355,39 @@ export function ChatClient({
         )}
 
         {messages.map((msg, i) => {
-          const isMe    = msg.sender_id === currentUserId
+          const senderId = msg.sender_id || (Array.isArray(msg.sender) ? msg.sender[0]?.id : msg.sender?.id)
+          const isMe = !!currentUserId && !!senderId && senderId === currentUserId
           const prevMsg = messages[i - 1]
           const showTime = !prevMsg ||
             new Date(msg.created_at).getTime() - new Date(prevMsg.created_at).getTime() > 5 * 60 * 1000
 
           return (
-            <div key={msg.id}>
+            <div key={msg.id} className="space-y-1.5">
               {showTime && (
-                <p className="text-center text-[10px] my-2" style={{ color: '#9ab5cc' }}>
+                <p className="text-center text-[10px] my-3 font-semibold" style={{ color: '#9ab5cc' }}>
                   {formatDate(msg.created_at)}
                 </p>
               )}
-              <div className={cn('flex', isMe ? 'justify-end' : 'justify-start')}>
+              <div className={cn('flex items-end gap-2 w-full', isMe ? 'justify-end' : 'justify-start')}>
+                {!isMe && (
+                  <div
+                    className="w-7 h-7 rounded-full flex items-center justify-center text-[9px] font-black shrink-0 overflow-hidden border-2 mb-0.5"
+                    style={{ background: '#eef6fd', borderColor: '#a9d3f1', color: '#2a5f8f' }}
+                  >
+                    {other.avatar_url ? (
+                      <img src={other.avatar_url} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      getInitials(other.username)
+                    )}
+                  </div>
+                )}
                 <div
                   className={cn(
-                    'max-w-[75%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed',
-                    isMe ? 'rounded-br-sm' : 'rounded-bl-sm'
+                    'max-w-[70%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed shadow-sm transition-all',
+                    isMe
+                      ? 'rounded-br-sm text-white bg-gradient-to-br from-[#74ACDF] to-[#5b96cc]'
+                      : 'rounded-bl-sm text-[#1a2f45] bg-[#f0f6fa] border border-[#d4e9f8]'
                   )}
-                  style={isMe
-                    ? { background: '#5b96cc', color: 'white' }
-                    : { background: '#eef6fd', color: '#1a2f45' }
-                  }
                 >
                   {msg.content}
                 </div>

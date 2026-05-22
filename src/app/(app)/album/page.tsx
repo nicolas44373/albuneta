@@ -5,47 +5,49 @@ import { createClient } from '@/lib/supabase/client'
 import { ALBUM_ID, ALL_STICKERS, WC2026_GROUPS } from '@/data/wc2026'
 import type { Sticker } from '@/lib/types'
 import { cn } from '@/lib/utils'
-import { ChevronDown, Search } from 'lucide-react'
+import { Search, X, Plus, Minus, Sparkles } from 'lucide-react'
 
 type Status = 'have' | 'need' | null
-type StatusMap = Map<string, Status>
+type StatusMap = Map<string, { status: Status; quantity: number }>
 type IdMap    = Map<number, string>
 type FilterTab = 'all' | 'have' | 'need'
 
-// ─── Sticker button ──────────────────────────────────────────────────────────
+// ─── Sticker Card (Large display inside selections) ───────────────────────────
 
-function StickerBtn({
-  label, playerName, rarity, status, pending, onClick,
+function StickerCardLarge({
+  label, playerName, rarity, status, quantity, pending, onClick,
 }: {
   label: string; playerName: string; rarity: string
-  status: Status; pending: boolean; onClick: () => void
+  status: Status; quantity: number; pending: boolean; onClick: () => void
 }) {
-  const short = playerName.length > 9 ? playerName.slice(0, 9) : playerName
-
-  let btnStyle: React.CSSProperties = {
-    background: '#f8fbff',
-    color: '#a9d3f1',
-    borderColor: '#d4e9f8',
-  }
-  let dotColor = ''
-
-  if (rarity === 'foil' && status === null) {
-    btnStyle = {
-      background: '#fefce8',
-      color: '#d97706',
-      borderColor: '#fbbf24',
-      boxShadow: '0 0 6px rgba(245,183,0,0.2)',
-    }
-  } else if (rarity === 'special' && status === null) {
-    btnStyle = { background: '#faf5ff', color: '#9333ea', borderColor: '#d8b4fe' }
-  }
+  let cardClass = 'bg-white border-[#d4e9f8] text-[#74ACDF]'
+  let shimmerClass = ''
+  let statusBadge = null
 
   if (status === 'have') {
-    btnStyle = { background: '#f0fdf4', color: '#16a34a', borderColor: '#86efac' }
-    dotColor = '#16a34a'
+    cardClass = 'bg-[#f0fdf4] border-[#86efac] text-[#16a34a] font-black'
+    statusBadge = (
+      <span className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-[#16a34a] text-white flex items-center justify-center text-[10px] font-bold shadow-md">
+        ✓
+      </span>
+    )
   } else if (status === 'need') {
-    btnStyle = { background: '#fff7ed', color: '#d97706', borderColor: '#fdba74' }
-    dotColor = '#d97706'
+    cardClass = 'bg-[#fff7ed] border-[#fdba74] text-[#d97706] font-black'
+    statusBadge = (
+      <span className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-[#d97706] text-white flex items-center justify-center text-[10px] font-bold shadow-md">
+        ✗
+      </span>
+    )
+  } else {
+    if (rarity === 'foil') {
+      shimmerClass = 'foil-shimmer'
+    } else if (rarity === 'special') {
+      cardClass = 'bg-[#faf5ff] border-[#d8b4fe] text-[#9333ea]'
+    }
+  }
+
+  if (rarity === 'foil' && status === 'have') {
+    shimmerClass = 'foil-shimmer !border-[#4ade80]'
   }
 
   return (
@@ -53,154 +55,120 @@ function StickerBtn({
       onClick={onClick}
       disabled={pending}
       className={cn(
-        'relative flex flex-col items-center justify-center rounded-xl border-2 transition-all select-none w-full',
+        'relative flex flex-col items-center justify-between p-3 rounded-2xl border-2 transition-all duration-300 select-none w-full active:scale-95 hover:scale-[1.02] shadow-sm',
+        cardClass,
         pending && 'opacity-50',
+        shimmerClass
       )}
-      style={{ ...btnStyle, aspectRatio: '3/4' }}
+      style={{ aspectRatio: '3/4' }}
     >
-      <span className="text-sm font-black leading-none">{label}</span>
-      <span className="text-[10px] leading-none mt-1 w-full text-center px-1 truncate opacity-65">
-        {short}
-      </span>
-      {dotColor && (
-        <span
-          className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full border-2 border-white"
-          style={{ background: dotColor }}
-        />
-      )}
+      <div className="flex items-center justify-between w-full">
+        <span className="text-[10px] font-black px-2 py-0.5 rounded-lg bg-[#eef6fd] text-[#2a5f8f] border border-[#d4e9f8]">
+          {label}
+        </span>
+        {status === 'have' && quantity > 1 && (
+          <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-[#22c55e] text-white shadow-sm shrink-0">
+            x{quantity}
+          </span>
+        )}
+      </div>
+
+      <div className="my-auto py-1 text-center flex flex-col items-center justify-center w-full">
+        {rarity === 'foil' && (
+          <span className="text-[8px] font-black uppercase tracking-wider text-amber-600 mb-0.5 flex items-center gap-0.5">
+            <Sparkles size={8} /> Holograma
+          </span>
+        )}
+        {rarity === 'special' && (
+          <span className="text-[8px] font-black uppercase tracking-wider text-[#9333ea] mb-0.5">
+            Especial
+          </span>
+        )}
+        <span className="text-[11px] font-extrabold leading-tight text-[#1a2f45] line-clamp-2 max-w-full break-words px-1">
+          {playerName}
+        </span>
+      </div>
+
+      {statusBadge}
     </button>
   )
 }
 
-// ─── Section accordion (one team) ────────────────────────────────────────────
+// ─── Section Card (Clickable Country card on main list) ───────────────────────
 
-function SectionAccordion({
-  title, stickers, statusMap, pendingIds, onTap, filter, isFwc, isCoke,
+function SectionCard({
+  title, stickers, statusMap, onClick, filter, isFwc, isCoke,
 }: {
   title: string
   stickers: { number: number; id: string; rarity: string; playerName: string }[]
   statusMap: StatusMap
-  pendingIds: Set<string>
-  onTap: (id: string) => void
+  onClick: () => void
   filter: FilterTab
   isFwc?: boolean
   isCoke?: boolean
 }) {
-  const [open, setOpen] = useState(false)
-
-  const visible = useMemo(() => {
+  const visibleStickers = useMemo(() => {
     if (filter === 'all') return stickers
-    return stickers.filter(s => statusMap.get(s.id) === filter)
+    return stickers.filter(s => statusMap.get(s.id)?.status === filter)
   }, [stickers, statusMap, filter])
 
-  const haveCount = stickers.filter(s => statusMap.get(s.id) === 'have').length
-  const needCount = stickers.filter(s => statusMap.get(s.id) === 'need').length
+  const haveCount = useMemo(() => stickers.filter(s => statusMap.get(s.id)?.status === 'have').length, [stickers, statusMap])
+  const needCount = useMemo(() => stickers.filter(s => statusMap.get(s.id)?.status === 'need').length, [stickers, statusMap])
   const total     = stickers.length
   const pct       = total > 0 ? Math.round((haveCount / total) * 100) : 0
 
-  if (filter !== 'all' && visible.length === 0) return null
+  if (filter !== 'all' && visibleStickers.length === 0) return null
 
   const accent    = isFwc || isCoke ? '#F5B700' : '#74ACDF'
-  const accentDim = isFwc || isCoke ? '#fffbeb'  : '#f8fbff'
 
   return (
-    <div
-      className="rounded-xl overflow-hidden transition-all"
+    <button
+      onClick={onClick}
+      className="w-full text-left p-4 rounded-2xl border transition-all duration-300 hover:scale-[1.01] active:scale-[0.99] flex flex-col justify-between"
       style={{
-        background: accentDim,
-        border: '1px solid #e8f4fd',
-        borderLeft: `3px solid ${accent}`,
+        background: 'white',
+        borderColor: '#d4e9f8',
+        boxShadow: '0 4px 12px rgba(116,172,223,0.04)',
       }}
     >
-      {/* ── Tap area ── */}
-      <button
-        onClick={() => setOpen(o => !o)}
-        className="w-full text-left px-4 pt-3 pb-2 transition-colors"
-      >
-        {/* Row 1: name + count + chevron */}
-        <div className="flex items-center justify-between gap-3">
-          <span className="font-black text-base truncate leading-none" style={{ color: '#1a2f45' }}>
+      <div className="flex items-center justify-between w-full">
+        <div className="flex items-center gap-2.5">
+          <span
+            className="w-2.5 h-6 rounded-full"
+            style={{ background: accent }}
+          />
+          <span className="font-black text-base text-[#1a2f45] tracking-tight">
             {title}
           </span>
-          <div className="flex items-center gap-2 shrink-0">
-            {haveCount > 0 && (
-              <span
-                className="px-2 py-0.5 rounded-full text-[11px] font-bold"
-                style={{ background: '#d4e9f8', color: '#2a5f8f' }}
-              >
-                {haveCount} ✓
-              </span>
-            )}
-            {needCount > 0 && (
-              <span
-                className="px-2 py-0.5 rounded-full text-[11px] font-bold"
-                style={{ background: '#fef3c7', color: '#d97706' }}
-              >
-                {needCount} ✗
-              </span>
-            )}
-            <ChevronDown
-              size={16}
-              className={cn('transition-transform duration-200', open && 'rotate-180')}
-              style={{ color: accent, opacity: 0.8 }}
-            />
-          </div>
         </div>
-
-        {/* Row 2: progress bar + percentage */}
-        <div className="flex items-center gap-2 mt-2">
-          <div className="flex-1 h-1.5 rounded-full" style={{ background: '#e8f4fd' }}>
-            <div
-              className="h-full rounded-full transition-all duration-500"
-              style={{
-                width: `${pct}%`,
-                background: pct === 100
-                  ? `linear-gradient(to right, ${accent}, #F5B700)`
-                  : accent,
-              }}
-            />
-          </div>
-          <span
-            className="shrink-0 text-[10px] font-semibold tabular-nums w-10 text-right"
-            style={{ color: pct > 0 ? accent : '#b8d5ea' }}
-          >
-            {haveCount}/{total}
+        <div className="flex items-center gap-1.5">
+          {haveCount > 0 && (
+            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-[#eef6fd] text-[#2a5f8f] border border-[#d4e9f8]">
+              {haveCount} ✓
+            </span>
+          )}
+          {needCount > 0 && (
+            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-[#fffbeb] text-[#d97706] border border-[#fde68a]">
+              {needCount} ✗
+            </span>
+          )}
+          <span className="text-xs font-black text-[#5b7a93] ml-1">
+            {pct}%
           </span>
         </div>
-      </button>
-
-      {/* ── Sticker grid ── */}
-      {open && (
+      </div>
+      <div className="w-full h-2 rounded-full bg-[#f0f7fd] mt-3.5 overflow-hidden">
         <div
-          className="px-3 pb-3 pt-1"
+          className="h-full rounded-full transition-all duration-500"
           style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(72px, 1fr))',
-            gap: '8px',
-            borderTop: '1px solid #e8f4fd',
-            background: '#f8fbff',
+            width: `${pct}%`,
+            background: pct === 100
+              ? `linear-gradient(to right, ${accent}, #F5B700)`
+              : accent,
           }}
-        >
-          {visible.map((s, i) => {
-            const label =
-              isFwc   ? String(s.number).padStart(2, '0')
-              : isCoke ? `CC${i + 1}`
-              : String(i + 1)
-            return (
-              <StickerBtn
-                key={s.id}
-                label={label}
-                playerName={s.playerName}
-                rarity={s.rarity}
-                status={statusMap.get(s.id) ?? null}
-                pending={pendingIds.has(s.id)}
-                onClick={() => onTap(s.id)}
-              />
-            )
-          })}
-        </div>
-      )}
-    </div>
+        />
+      </div>
+    </button>
   )
 }
 
@@ -208,7 +176,7 @@ function SectionAccordion({
 
 function GroupHeader({ group }: { group: string }) {
   return (
-    <div className="flex items-center gap-3 px-1 pt-5 pb-2">
+    <div className="flex items-center gap-3 px-1 pt-6 pb-2">
       <div className="h-px flex-1" style={{ background: 'linear-gradient(to right, transparent, rgba(116,172,223,0.3))' }} />
       <div
         className="flex items-center gap-2 px-3 py-1.5 rounded-full shrink-0 border"
@@ -220,7 +188,7 @@ function GroupHeader({ group }: { group: string }) {
         >
           {group}
         </span>
-        <span className="text-xs font-black uppercase tracking-[0.2em]" style={{ color: '#2a5f8f' }}>
+        <span className="text-[11px] font-black uppercase tracking-[0.2em]" style={{ color: '#2a5f8f' }}>
           Grupo {group}
         </span>
       </div>
@@ -243,6 +211,23 @@ export default function AlbumPage() {
   const [filter, setFilter]         = useState<FilterTab>('all')
   const [search, setSearch]         = useState('')
 
+  // Modals status
+  const [activeSection, setActiveSection] = useState<{
+    title: string
+    stickers: { number: number; id: string; rarity: string; playerName: string }[]
+    isFwc?: boolean
+    isCoke?: boolean
+  } | null>(null)
+
+  const [detailSticker, setDetailSticker] = useState<{
+    id: string
+    label: string
+    playerName: string
+    rarity: string
+    status: Status
+    quantity: number
+  } | null>(null)
+
   const idMap = useMemo<IdMap>(() => {
     const m = new Map<number, string>()
     dbStickers.forEach(s => m.set(s.number, s.id))
@@ -257,27 +242,40 @@ export default function AlbumPage() {
 
       const [{ data: stickers }, { data: userStickers }] = await Promise.all([
         supabase.from('stickers').select('*').eq('album_id', ALBUM_ID).order('number'),
-        supabase.from('user_stickers').select('sticker_id, status').eq('user_id', user.id),
+        supabase.from('user_stickers').select('sticker_id, status, quantity').eq('user_id', user.id),
       ])
 
       setDbStickers(stickers ?? [])
-      const map = new Map<string, Status>()
-      userStickers?.forEach(us => map.set(us.sticker_id, us.status as Status))
+      const map = new Map<string, { status: Status; quantity: number }>()
+      userStickers?.forEach(us => map.set(us.sticker_id, { status: us.status as Status, quantity: us.quantity }))
       setStatusMap(map)
       setLoading(false)
     }
     load()
   }, [])
 
-  const handleTap = useCallback(async (stickerId: string) => {
+  const handleUpdateState = useCallback(async (stickerId: string, nextStatus: Status, nextQuantity: number) => {
     if (!userId) return
-    const current = statusMap.get(stickerId) ?? null
-    const next: Status = current === null ? 'have' : current === 'have' ? 'need' : null
 
-    // Optimistic update
-    setStatusMap(prev => { const m = new Map(prev); m.set(stickerId, next); return m })
+    const current = statusMap.get(stickerId) ?? { status: null, quantity: 0 }
+
+    // Optimistic Update local map state
+    setStatusMap(prev => {
+      const m = new Map(prev)
+      if (nextStatus === null) {
+        m.delete(stickerId)
+      } else {
+        m.set(stickerId, { status: nextStatus, quantity: nextQuantity })
+      }
+      return m
+    })
     setPendingIds(prev => new Set(prev).add(stickerId))
     setSaveError(null)
+
+    // Update detailSticker state immediately if open
+    if (detailSticker && detailSticker.id === stickerId) {
+      setDetailSticker(prev => prev ? { ...prev, status: nextStatus, quantity: nextQuantity } : null)
+    }
 
     const { error: delErr } = await supabase
       .from('user_stickers')
@@ -288,25 +286,43 @@ export default function AlbumPage() {
     if (delErr) {
       console.error('[album] delete error:', delErr)
       setSaveError(delErr.message)
-      setStatusMap(prev => { const m = new Map(prev); m.set(stickerId, current); return m })
+      // Rollback on error
+      setStatusMap(prev => {
+        const m = new Map(prev)
+        if (current.status === null) m.delete(stickerId)
+        else m.set(stickerId, current)
+        return m
+      })
+      if (detailSticker && detailSticker.id === stickerId) {
+        setDetailSticker(prev => prev ? { ...prev, status: current.status, quantity: current.quantity } : null)
+      }
       setPendingIds(prev => { const s = new Set(prev); s.delete(stickerId); return s })
       return
     }
 
-    if (next !== null) {
+    if (nextStatus !== null) {
       const { error: insErr } = await supabase
         .from('user_stickers')
-        .insert({ user_id: userId, sticker_id: stickerId, status: next, quantity: 1 })
+        .insert({ user_id: userId, sticker_id: stickerId, status: nextStatus, quantity: nextQuantity })
 
       if (insErr) {
         console.error('[album] insert error:', insErr)
         setSaveError(insErr.message)
-        setStatusMap(prev => { const m = new Map(prev); m.set(stickerId, current); return m })
+        // Rollback
+        setStatusMap(prev => {
+          const m = new Map(prev)
+          if (current.status === null) m.delete(stickerId)
+          else m.set(stickerId, current)
+          return m
+        })
+        if (detailSticker && detailSticker.id === stickerId) {
+          setDetailSticker(prev => prev ? { ...prev, status: current.status, quantity: current.quantity } : null)
+        }
       }
     }
 
     setPendingIds(prev => { const s = new Set(prev); s.delete(stickerId); return s })
-  }, [userId, statusMap]) // supabase es un singleton estable internamente
+  }, [userId, statusMap, detailSticker])
 
   const sections = useMemo(() => {
     const groups = new Map<string, { number: number; id: string; rarity: string; playerName: string }[]>()
@@ -327,11 +343,11 @@ export default function AlbumPage() {
 
   const stats = useMemo(() => {
     let have = 0, need = 0
-    statusMap.forEach(v => { if (v === 'have') have++; else if (v === 'need') need++ })
+    statusMap.forEach(v => { if (v.status === 'have') have++; else if (v.status === 'need') need++ })
     return { have, need, total: dbStickers.length }
   }, [statusMap, dbStickers.length])
 
-  const pct = stats.total > 0 ? Math.round((stats.have / 980) * 100) : 0
+  const pct = stats.total > 0 ? Math.round((stats.have / stats.total) * 100) : 0
 
   return (
     <div className="relative flex flex-col min-h-screen bg-white">
@@ -346,7 +362,7 @@ export default function AlbumPage() {
           style={{
             width: 'min(80vw, 460px)',
             objectFit: 'contain',
-            opacity: 0.05,
+            opacity: 0.04,
             mixBlendMode: 'multiply',
             transform: 'translateY(8%)',
           }}
@@ -356,15 +372,13 @@ export default function AlbumPage() {
       {/* ── Header ── */}
       <div
         className="relative sticky top-0 z-20 border-b px-4 pt-4 pb-3 space-y-3"
-        style={{ background: 'rgba(255,255,255,0.97)', borderColor: '#e8f4fd', boxShadow: '0 2px 8px rgba(116,172,223,0.08)' }}
+        style={{ background: 'rgba(255,255,255,0.97)', borderColor: '#d4e9f8', boxShadow: '0 2px 8px rgba(116,172,223,0.08)' }}
       >
-        {/* Top accent bar */}
         <div
           className="absolute top-0 left-0 right-0 h-[2px]"
           style={{ background: 'linear-gradient(to right, transparent, #74ACDF 30%, #F5B700 50%, #74ACDF 70%, transparent)' }}
         />
 
-        {/* Title row */}
         <div className="flex items-center justify-between">
           <div>
             <div className="flex items-center gap-2">
@@ -374,25 +388,24 @@ export default function AlbumPage() {
               >
                 FIFA World Cup 2026
               </h1>
-              <span className="text-sm tracking-wider" style={{ color: '#F5B700' }}>★★★</span>
+              <span className="text-sm tracking-wider text-[#F5B700]">★★★</span>
             </div>
-            <p className="text-[11px] mt-0.5 font-medium" style={{ color: '#6b8caa' }}>
+            <p className="text-[11px] mt-0.5 font-bold text-[#5b7a93]">
               Álbum Panini oficial · {stats.total} figuritas
             </p>
           </div>
           <div className="text-right">
             <span
-              className="text-3xl font-black tabular-nums"
-              style={{ fontFamily: 'var(--font-baloo2), system-ui', color: '#74ACDF' }}
+              className="text-3xl font-black tabular-nums text-[#74ACDF]"
+              style={{ fontFamily: 'var(--font-baloo2), system-ui' }}
             >
               {pct}%
             </span>
-            <p className="text-[11px]" style={{ color: '#6b8caa' }}>completado</p>
+            <p className="text-[11px] font-black text-[#5b7a93]">completado</p>
           </div>
         </div>
 
-        {/* Progress bar */}
-        <div className="h-2 rounded-full" style={{ background: '#e8f4fd' }}>
+        <div className="h-2 rounded-full bg-[#f0f7fd]">
           <div
             className="h-full rounded-full transition-all duration-700"
             style={{
@@ -407,7 +420,7 @@ export default function AlbumPage() {
         <div className="flex gap-1.5">
           {([
             { id: 'all'  as const, label: 'Todas',    count: stats.total },
-            { id: 'have' as const, label: 'Tengo',    count: stats.have,  countColor: '#2a5f8f' },
+            { id: 'have' as const, label: 'Tengo',    count: stats.have,  countColor: '#16a34a' },
             { id: 'need' as const, label: 'Me falta', count: stats.need,  countColor: '#d97706' },
           ]).map(({ id, label, count, countColor }) => {
             const active = filter === id
@@ -415,14 +428,14 @@ export default function AlbumPage() {
               <button
                 key={id}
                 onClick={() => setFilter(id)}
-                className="flex-1 py-1.5 rounded-xl text-xs font-semibold transition-all"
+                className="flex-1 py-1.5 rounded-xl text-xs font-bold transition-all"
                 style={{
                   background: active ? '#eef6fd' : 'white',
-                  border: `1px solid ${active ? '#a9d3f1' : '#e8f4fd'}`,
-                  color: active ? '#1a2f45' : '#9ab5cc',
+                  border: `1.5px solid ${active ? '#a9d3f1' : '#e8f4fd'}`,
+                  color: active ? '#1a2f45' : '#5b7a93',
                 }}
               >
-                <span className="font-black" style={{ color: countColor ?? (active ? '#1a2f45' : '#9ab5cc') }}>
+                <span className="font-black" style={{ color: countColor ?? (active ? '#1a2f45' : '#5b7a93') }}>
                   {count}
                 </span>
                 <span className="ml-1">{label}</span>
@@ -433,13 +446,13 @@ export default function AlbumPage() {
 
         {/* Search */}
         <div className="relative">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: '#a9d3f1' }} />
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#74ACDF]" />
           <input
             type="text"
             placeholder="Buscar selección..."
             value={search}
             onChange={e => setSearch(e.target.value)}
-            className="w-full h-9 pl-8 pr-3 rounded-xl text-sm focus:outline-none transition-all"
+            className="w-full h-9 pl-8 pr-3 rounded-xl text-sm focus:outline-none transition-all font-bold"
             style={{ background: '#f8fbff', border: '1.5px solid #d4e9f8', color: '#1a2f45' }}
             onFocus={e => (e.target.style.borderColor = '#74ACDF')}
             onBlur={e  => (e.target.style.borderColor = '#d4e9f8')}
@@ -450,7 +463,7 @@ export default function AlbumPage() {
       {/* ── Save error banner ── */}
       {saveError && (
         <div
-          className="relative z-10 mx-4 mt-2 px-3 py-2 rounded-xl text-xs border"
+          className="relative z-10 mx-4 mt-2 px-3 py-2 rounded-xl text-xs border font-bold"
           style={{ background: '#fef2f2', borderColor: '#fecaca', color: '#dc2626' }}
         >
           <strong>Error al guardar:</strong> {saveError}
@@ -458,60 +471,66 @@ export default function AlbumPage() {
       )}
 
       {/* ── Legend ── */}
-      <div className="relative z-10 flex items-center gap-4 px-4 py-2 text-[10px]" style={{ color: '#9ab5cc' }}>
+      <div className="relative z-10 flex items-center justify-around px-4 py-2.5 text-[10px] font-black bg-[#f8fbff] border-b border-[#eef6fd] text-[#5b7a93]">
         <span className="flex items-center gap-1">
-          <span className="w-2.5 h-2.5 rounded border-2" style={{ background: '#f0fdf4', borderColor: '#86efac' }} />
+          <span className="w-3 h-3 rounded-md border-2 bg-[#f0fdf4] border-[#86efac]" />
           Tengo
         </span>
         <span className="flex items-center gap-1">
-          <span className="w-2.5 h-2.5 rounded border-2" style={{ background: '#fff7ed', borderColor: '#fdba74' }} />
+          <span className="w-3 h-3 rounded-md border-2 bg-[#fff7ed] border-[#fdba74]" />
           Me falta
         </span>
         <span className="flex items-center gap-1">
-          <span className="w-2.5 h-2.5 rounded border" style={{ background: '#f8fbff', borderColor: '#d4e9f8' }} />
+          <span className="w-3 h-3 rounded-md border bg-white border-[#d4e9f8]" />
           Sin marcar
         </span>
         <span className="flex items-center gap-1">
-          <span className="w-2.5 h-2.5 rounded border-2" style={{ background: '#fefce8', borderColor: '#fbbf24' }} />
-          Foil
+          <span className="w-3 h-3 rounded-md border-2 bg-[#faf5ff] border-[#d8b4fe]" />
+          Especial
+        </span>
+        <span className="flex items-center gap-1">
+          <span className="w-3 h-3 rounded-md border-2 foil-shimmer border-amber-400 animate-pulse" />
+          Holograma
         </span>
       </div>
 
-      {/* ── Content ── */}
-      <div className="relative z-10 flex-1 px-3 pb-24 space-y-1">
+      {/* ── Content (Selections cards list) ── */}
+      <div className="relative z-10 flex-1 px-4 pb-24 pt-2 space-y-2">
         {loading ? (
           <div className="flex flex-col items-center justify-center gap-3 h-52">
             <div
               className="w-10 h-10 rounded-full border-2 border-t-transparent animate-spin"
               style={{ borderColor: '#d4e9f8', borderTopColor: '#74ACDF' }}
             />
-            <span className="text-xs" style={{ color: '#6b8caa' }}>Cargando álbum...</span>
+            <span className="text-xs font-bold text-[#5b7a93]">Cargando tu álbum...</span>
           </div>
         ) : (
           <>
             {/* FWC special section */}
             {filteredSections.has('FWC') && (
               <div>
-                <div className="flex items-center gap-3 px-1 pt-4 pb-1">
+                <div className="flex items-center gap-3 px-1 pt-4 pb-2">
                   <div className="h-px flex-1" style={{ background: 'rgba(245,183,0,0.3)' }} />
                   <div
-                    className="flex items-center gap-1.5 px-3 py-1 rounded-full border shrink-0"
-                    style={{ background: '#fffbeb', borderColor: '#fde68a' }}
+                    className="flex items-center gap-1.5 px-3 py-1 rounded-full border shrink-0 bg-[#fffbeb] border-[#fde68a]"
                   >
-                    <span className="text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: '#d97706' }}>
+                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[#d97706]">
                       ⚽ FWC Especiales
                     </span>
                   </div>
                   <div className="h-px flex-1" style={{ background: 'rgba(245,183,0,0.3)' }} />
                 </div>
-                <SectionAccordion
+                <SectionCard
                   title="FWC"
                   stickers={filteredSections.get('FWC')!}
                   statusMap={statusMap}
-                  pendingIds={pendingIds}
-                  onTap={handleTap}
                   filter={filter}
                   isFwc
+                  onClick={() => setActiveSection({
+                    title: 'FWC',
+                    stickers: filteredSections.get('FWC')!,
+                    isFwc: true
+                  })}
                 />
               </div>
             )}
@@ -523,16 +542,18 @@ export default function AlbumPage() {
               return (
                 <div key={group}>
                   <GroupHeader group={group} />
-                  <div className="space-y-1 mt-1">
+                  <div className="space-y-2 mt-2">
                     {teamSections.map(team => (
-                      <SectionAccordion
+                      <SectionCard
                         key={team}
                         title={team}
                         stickers={filteredSections.get(team)!}
                         statusMap={statusMap}
-                        pendingIds={pendingIds}
-                        onTap={handleTap}
                         filter={filter}
+                        onClick={() => setActiveSection({
+                          title: team,
+                          stickers: filteredSections.get(team)!
+                        })}
                       />
                     ))}
                   </div>
@@ -543,30 +564,286 @@ export default function AlbumPage() {
             {/* Coca-Cola */}
             {filteredSections.has('Coca-Cola') && (
               <div>
-                <div className="flex items-center gap-3 px-1 pt-4 pb-1">
+                <div className="flex items-center gap-3 px-1 pt-4 pb-2">
                   <div className="h-px flex-1" style={{ background: 'rgba(239,68,68,0.2)' }} />
                   <span
-                    className="text-[10px] font-black uppercase tracking-[0.2em] shrink-0"
-                    style={{ color: 'rgba(239,68,68,0.7)' }}
+                    className="text-[10px] font-black uppercase tracking-[0.2em] shrink-0 text-red-500"
                   >
-                    🥤 Coca-Cola
+                    🥤 Coca-Cola Especiales
                   </span>
                   <div className="h-px flex-1" style={{ background: 'rgba(239,68,68,0.2)' }} />
                 </div>
-                <SectionAccordion
+                <SectionCard
                   title="Coca-Cola"
                   stickers={filteredSections.get('Coca-Cola')!}
                   statusMap={statusMap}
-                  pendingIds={pendingIds}
-                  onTap={handleTap}
                   filter={filter}
                   isCoke
+                  onClick={() => setActiveSection({
+                    title: 'Coca-Cola',
+                    stickers: filteredSections.get('Coca-Cola')!,
+                    isCoke: true
+                  })}
                 />
               </div>
             )}
           </>
         )}
       </div>
+
+      {/* ── Selection Modal (Selección Ampliada) ── */}
+      {activeSection && (
+        <div className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm flex flex-col justify-end sm:justify-center items-center px-0 sm:px-4">
+          <div
+            className="w-full sm:max-w-md h-[90vh] sm:h-[80vh] bg-white rounded-t-3xl sm:rounded-3xl flex flex-col overflow-hidden shadow-2xl border"
+            style={{ borderColor: '#d4e9f8' }}
+          >
+            {/* Modal Header */}
+            <div
+              className="px-5 pt-5 pb-4 border-b space-y-3 shrink-0"
+              style={{ background: '#f8fbff', borderColor: '#e8f4fd' }}
+            >
+              <div className="flex items-start justify-between">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h2
+                      className="text-xl font-black text-[#1a2f45]"
+                      style={{ fontFamily: 'var(--font-baloo2), system-ui' }}
+                    >
+                      {activeSection.title}
+                    </h2>
+                    {!(activeSection.isFwc || activeSection.isCoke) && (
+                      <span className="text-sm tracking-wider text-[#F5B700]">★★★</span>
+                    )}
+                  </div>
+                  <p className="text-xs font-bold text-[#5b7a93] mt-0.5">
+                    {activeSection.isFwc ? 'Sección Especial FIFA' :
+                     activeSection.isCoke ? 'Edición Especial Coca-Cola' : 'Grupo de Clasificación'}
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    setActiveSection(null)
+                    setDetailSticker(null)
+                  }}
+                  className="p-2 rounded-xl hover:bg-[#eef6fd] transition-colors text-gray-400 hover:text-gray-600 border border-[#d4e9f8] bg-white"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              {/* Progress bar inside Modal */}
+              {(() => {
+                const teamStickers = activeSection.stickers
+                const haveCount = teamStickers.filter(s => statusMap.get(s.id)?.status === 'have').length
+                const total = teamStickers.length
+                const pct = total > 0 ? Math.round((haveCount / total) * 100) : 0
+                return (
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between text-xs font-bold">
+                      <span className="text-[#5b7a93]">Progreso de la selección</span>
+                      <span className="text-[#2a5f8f]">{haveCount}/{total} ({pct}%)</span>
+                    </div>
+                    <div className="h-2 rounded-full bg-[#e8f4fd]">
+                      <div
+                        className="h-full rounded-full transition-all duration-500"
+                        style={{
+                          width: `${pct}%`,
+                          background: pct === 100 ? 'linear-gradient(to right, #74ACDF, #F5B700)' : '#74ACDF'
+                        }}
+                      />
+                    </div>
+                  </div>
+                )
+              })()}
+            </div>
+
+            {/* Modal Scrollable Content */}
+            <div className="flex-1 overflow-y-auto px-4 py-4 no-scrollbar bg-gray-50/50">
+              <div
+                className="grid gap-3"
+                style={{
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(96px, 1fr))'
+                }}
+              >
+                {activeSection.stickers.map((s, i) => {
+                  const label =
+                    activeSection.isFwc ? String(s.number).padStart(2, '0')
+                    : activeSection.isCoke ? `CC${i + 1}`
+                    : String(i + 1)
+
+                  const stateInfo = statusMap.get(s.id) ?? { status: null, quantity: 0 }
+
+                  return (
+                    <StickerCardLarge
+                      key={s.id}
+                      label={label}
+                      playerName={s.playerName}
+                      rarity={s.rarity}
+                      status={stateInfo.status}
+                      quantity={stateInfo.quantity}
+                      pending={pendingIds.has(s.id)}
+                      onClick={() => {
+                        setDetailSticker({
+                          id: s.id,
+                          label,
+                          playerName: s.playerName,
+                          rarity: s.rarity,
+                          status: stateInfo.status,
+                          quantity: stateInfo.quantity
+                        })
+                      }}
+                    />
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 border-t bg-white flex justify-end shrink-0" style={{ borderColor: '#e8f4fd' }}>
+              <button
+                onClick={() => {
+                  setActiveSection(null)
+                  setDetailSticker(null)
+                }}
+                className="px-6 h-11 rounded-xl text-sm font-black bg-[#74ACDF] text-white transition-all active:scale-95"
+                style={{ boxShadow: '0 2px 10px rgba(116,172,223,0.3)' }}
+              >
+                Listo
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Sub-modal / Sheet for Sticker Details ── */}
+      {detailSticker && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm px-4 pb-10">
+          <div
+            className="w-full max-w-sm rounded-3xl p-6 space-y-6 border shadow-2xl bg-white animate-slide-up"
+            style={{ borderColor: '#d4e9f8' }}
+          >
+            <div className="flex items-start justify-between">
+              <div>
+                <span className="px-2.5 py-1 rounded-full text-[10px] font-black bg-[#eef6fd] text-[#2a5f8f] border border-[#d4e9f8]">
+                  Número {detailSticker.label}
+                </span>
+                <h3 className="text-lg font-black mt-2.5 text-[#1a2f45] leading-snug">
+                  {detailSticker.playerName}
+                </h3>
+                <p className="text-[11px] font-bold text-[#5b7a93] mt-1">
+                  Selección: {activeSection?.title} · Categoría: {
+                    detailSticker.rarity === 'foil' ? 'Holograma (Foil)' :
+                    detailSticker.rarity === 'special' ? 'Especial' : 'Común'
+                  }
+                </p>
+              </div>
+              <button
+                onClick={() => setDetailSticker(null)}
+                className="p-1.5 rounded-full hover:bg-gray-100 transition-colors text-gray-400 hover:text-gray-600 border"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Visual Card Preview */}
+            <div className="flex justify-center py-2 select-none">
+              <div
+                className={cn(
+                  "w-32 h-44 rounded-2xl border-[3px] flex flex-col justify-between p-3.5 shadow-md transition-all duration-300 relative",
+                  detailSticker.rarity === 'foil' ? 'foil-shimmer border-yellow-400' :
+                  detailSticker.rarity === 'special' ? 'bg-[#faf5ff] border-purple-400 text-purple-700' : 'bg-white border-[#d4e9f8]'
+                )}
+              >
+                <span className="text-[9px] font-black bg-white/90 border px-1.5 py-0.5 rounded-md text-gray-800 leading-none w-fit">
+                  {detailSticker.label}
+                </span>
+                <div className="text-center font-black text-xs text-[#1a2f45] my-auto leading-tight break-words px-1">
+                  {detailSticker.playerName}
+                </div>
+                <div className="text-[8px] font-black text-center text-[#5b7a93] uppercase tracking-wider">
+                  {activeSection?.title}
+                </div>
+              </div>
+            </div>
+
+            {/* State Switcher */}
+            <div className="space-y-2">
+              <p className="text-[10px] font-black text-[#5b7a93] uppercase tracking-wider">
+                Estado en tu Álbum:
+              </p>
+              <div className="flex gap-2 bg-[#f8fbff] p-1 rounded-xl border border-[#e8f4fd]">
+                {/* Button: Sin marcar */}
+                <button
+                  onClick={() => handleUpdateState(detailSticker.id, null, 0)}
+                  className={cn(
+                    "flex-1 py-2 rounded-lg text-xs font-black transition-all",
+                    detailSticker.status === null
+                      ? "bg-[#eef6fd] border border-[#a9d3f1] text-[#2a5f8f] shadow-sm"
+                      : "text-[#9ab5cc] hover:text-[#5b7a93]"
+                  )}
+                >
+                  Sin marcar
+                </button>
+
+                {/* Button: Me falta */}
+                <button
+                  onClick={() => handleUpdateState(detailSticker.id, 'need', 1)}
+                  className={cn(
+                    "flex-1 py-2 rounded-lg text-xs font-black transition-all",
+                    detailSticker.status === 'need'
+                      ? "bg-[#fff7ed] border border-[#fdba74] text-[#d97706] shadow-sm"
+                      : "text-[#9ab5cc] hover:text-[#5b7a93]"
+                  )}
+                >
+                  Me falta
+                </button>
+
+                {/* Button: Tengo */}
+                <button
+                  onClick={() => handleUpdateState(detailSticker.id, 'have', 1)}
+                  className={cn(
+                    "flex-1 py-2 rounded-lg text-xs font-black transition-all",
+                    detailSticker.status === 'have'
+                      ? "bg-[#f0fdf4] border border-[#86efac] text-[#16a34a] shadow-sm"
+                      : "text-[#9ab5cc] hover:text-[#5b7a93]"
+                  )}
+                >
+                  Tengo
+                </button>
+              </div>
+            </div>
+
+            {/* Quantity modifier (only shown if status is 'have') */}
+            {detailSticker.status === 'have' && (
+              <div className="bg-[#f0fdf4] border border-[#dcfce7] rounded-2xl p-3.5 flex items-center justify-between shadow-sm animate-fade-in">
+                <div>
+                  <p className="text-xs font-black text-[#16a34a]">¿La tenés repetida?</p>
+                  <p className="text-[9px] font-bold text-[#5b7a93] mt-0.5">Indicá cuántas tenés en total</p>
+                </div>
+                <div className="flex items-center gap-2.5">
+                  <button
+                    onClick={() => handleUpdateState(detailSticker.id, 'have', Math.max(1, detailSticker.quantity - 1))}
+                    className="w-7 h-7 rounded-lg bg-white border border-[#86efac] text-[#16a34a] flex items-center justify-center font-bold active:scale-90 transition-all shadow-sm"
+                  >
+                    <Minus size={12} />
+                  </button>
+                  <span className="w-5 text-center text-sm font-black text-[#1a2f45]">
+                    {detailSticker.quantity}
+                  </span>
+                  <button
+                    onClick={() => handleUpdateState(detailSticker.id, 'have', detailSticker.quantity + 1)}
+                    className="w-7 h-7 rounded-lg bg-white border border-[#86efac] text-[#16a34a] flex items-center justify-center font-bold active:scale-90 transition-all shadow-sm"
+                  >
+                    <Plus size={12} />
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
+

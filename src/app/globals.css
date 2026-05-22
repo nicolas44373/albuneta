@@ -423,3 +423,54 @@ body {
   border-top: 1.5px dashed #d4e9f8;
   margin: 0.75rem 0;
 }
+
+/* Foil card shimmer effect */
+@keyframes foil-shimmer-effect {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.foil-shimmer {
+  background: linear-gradient(
+    115deg,
+    #fffbeb 0%,
+    #fde68a 20%,
+    #a9d3f1 40%,
+    #fde68a 60%,
+    #d4e9f8 80%,
+    #fffbeb 100%
+  );
+  background-size: 300% 300%;
+  animation: foil-shimmer-effect 6s ease infinite;
+  box-shadow: 0 0 10px rgba(245, 183, 0, 0.25), inset 0 0 15px rgba(255, 255, 255, 0.6);
+}
+
+/* Glassmorphic card styling */
+.glass-premium {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+/* Pulse indicator */
+.pulse-glow {
+  box-shadow: 0 0 0 0 rgba(116, 172, 223, 0.7);
+  animation: pulse-glow-anim 2s infinite;
+}
+
+@keyframes pulse-glow-anim {
+  70% {
+    box-shadow: 0 0 0 8px rgba(116, 172, 223, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(116, 172, 223, 0);
+  }
+}
+

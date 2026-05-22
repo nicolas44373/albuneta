@@ -152,7 +152,7 @@ export default async function UserProfilePage({ params }: { params: Promise<{ id
           </h2>
           <div className="space-y-3">
             {ratings.map((r, i) => {
-              const rater = r.rater as { username: string } | null
+              const rater = (Array.isArray(r.rater) ? r.rater[0] : r.rater) as { username: string } | null
               return (
                 <div
                   key={i}

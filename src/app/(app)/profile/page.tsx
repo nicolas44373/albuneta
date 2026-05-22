@@ -166,7 +166,7 @@ export default async function ProfilePage() {
         ) : (
           <div className="space-y-3">
             {ratings.map((r, i) => {
-              const rater = r.rater as { username: string; avatar_url: string | null }
+              const rater = (Array.isArray(r.rater) ? r.rater[0] : r.rater) as { username: string; avatar_url: string | null } | null
               return (
                 <div
                   key={i}

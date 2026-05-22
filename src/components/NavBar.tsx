@@ -18,20 +18,22 @@ export function NavBar() {
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-50 backdrop-blur-xl border-t"
+      className="fixed bottom-0 left-0 right-0 z-50 glass-premium border-t transition-all duration-300"
       style={{
-        background: 'rgba(255,255,255,0.97)',
-        borderColor: '#e8f4fd',
-        boxShadow: '0 -2px 12px rgba(116,172,223,0.1)',
+        background: 'rgba(255, 255, 255, 0.88)',
+        borderColor: '#d4e9f8',
+        boxShadow: '0 -4px 20px rgba(116, 172, 223, 0.12)',
       }}
     >
       {/* Top accent line */}
       <div
-        className="absolute top-0 left-0 right-0 h-px"
-        style={{ background: 'linear-gradient(to right, transparent, rgba(116,172,223,0.5) 30%, rgba(245,183,0,0.5) 50%, rgba(116,172,223,0.5) 70%, transparent)' }}
+        className="absolute top-0 left-0 right-0 h-[2px]"
+        style={{
+          background: 'linear-gradient(to right, transparent, #74ACDF 25%, #F5B700 50%, #74ACDF 75%, transparent)',
+        }}
       />
 
-      <div className="flex items-center justify-around max-w-lg mx-auto h-16 px-2">
+      <div className="flex items-center justify-around max-w-lg mx-auto h-16 px-3">
         {links.map(({ href, label, icon: Icon }) => {
           const active = pathname.startsWith(href)
           return (
@@ -39,17 +41,35 @@ export function NavBar() {
               key={href}
               href={href}
               className={cn(
-                'flex flex-col items-center gap-0.5 px-2 py-2 rounded-xl transition-all',
-                !active && 'text-[#b8d5ea] hover:text-[#74ACDF]'
+                'relative flex flex-col items-center justify-center gap-1 w-14 h-12 rounded-xl transition-all duration-300 select-none',
+                active
+                  ? 'scale-105 font-bold text-[#2a5f8f]'
+                  : 'text-[#5b7a93] hover:text-[#2a5f8f] hover:scale-102'
               )}
-              style={active ? { color: '#74ACDF' } : undefined}
             >
+              {active && (
+                <span
+                  className="absolute -top-[2px] w-8 h-[3px] rounded-full"
+                  style={{
+                    background: 'linear-gradient(to right, #74ACDF, #F5B700)',
+                    boxShadow: '0 1px 6px rgba(116,172,223,0.6)',
+                  }}
+                />
+              )}
               <Icon
                 size={20}
-                strokeWidth={active ? 2.5 : 1.8}
-                style={active ? { filter: 'drop-shadow(0 0 6px rgba(116,172,223,0.5))' } : undefined}
+                strokeWidth={active ? 2.5 : 2.0}
+                className="transition-transform duration-300"
+                style={active ? { filter: 'drop-shadow(0 0 6px rgba(116,172,223,0.45))', color: '#74ACDF' } : undefined}
               />
-              <span className="text-[10px] font-semibold">{label}</span>
+              <span
+                className={cn(
+                  'text-[9px] tracking-wide transition-colors leading-none',
+                  active ? 'font-black text-[#1a2f45]' : 'font-semibold text-[#5b7a93]'
+                )}
+              >
+                {label}
+              </span>
             </Link>
           )
         })}
