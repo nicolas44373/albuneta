@@ -9,7 +9,7 @@ export default async function ChatListPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth/login')
 
-  const { data: rows } = await supabase
+  const { data: rows, error } = await supabase
     .from('chats')
     .select(`
       id,
@@ -25,7 +25,10 @@ export default async function ChatListPage() {
       ),
       messages ( content, created_at, sender_id )
     `)
-    .order('created_at', { referencedTable: 'messages', ascending: false })
+
+  if (error) {
+    console.error('[chat] Error fetching chats:', error)
+  }
 
   type ChatRow = typeof rows extends (infer T)[] | null ? T : never
 
@@ -97,10 +100,8 @@ export default async function ChatListPage() {
             <Link
               key={row.id}
               href={`/chat/${row.id}`}
-              className="flex items-center gap-3 px-4 py-4 transition-colors border-b"
+              className="flex items-center gap-3 px-4 py-4 transition-colors border-b hover:bg-[#f8fbff]"
               style={{ borderColor: '#eef6fd' }}
-              onMouseEnter={e => (e.currentTarget.style.background = '#f8fbff')}
-              onMouseLeave={e => (e.currentTarget.style.background = 'white')}
             >
               <div
                 className="w-12 h-12 rounded-full flex items-center justify-center text-sm font-bold shrink-0 border-2"
