@@ -181,7 +181,12 @@ export function ChatClient({
     if (!content || sending) return
     setSending(true)
     setText('')
-    await supabase.from('messages').insert({ chat_id: chatId, sender_id: currentUserId, content })
+    const { error } = await supabase
+      .from('messages')
+      .insert({ chat_id: chatId, sender_id: currentUserId, content })
+    if (error) {
+      console.error('[chat] Error sending message:', error)
+    }
     setSending(false)
   }
 

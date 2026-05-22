@@ -199,11 +199,24 @@ create policy "Users can rate after completed trade" on public.ratings
 -- Auto-crear perfil al registrarse
 create or replace function public.handle_new_user()
 returns trigger as $$
+declare
+  v_base_username text;
+  v_username text;
+  v_suffix integer := 1;
 begin
+  v_base_username := coalesce(new.raw_user_meta_data->>'username', split_part(new.email, '@', 1));
+  v_username := v_base_username;
+  
+  -- Si el nombre de usuario ya existe, le agregamos un número al final hasta que sea único
+  while exists (select 1 from public.profiles where username = v_username) loop
+    v_username := v_base_username || v_suffix::text;
+    v_suffix := v_suffix + 1;
+  end loop;
+
   insert into public.profiles (id, username, avatar_url)
   values (
     new.id,
-    coalesce(new.raw_user_meta_data->>'username', split_part(new.email, '@', 1)),
+    v_username,
     new.raw_user_meta_data->>'avatar_url'
   );
   return new;
@@ -261,7 +274,6 @@ returns table (
 begin
   return query
   with
-    -- figuritas que yo tengo de más
     my_haves as (
       select us.sticker_id, s.number
       from public.user_stickers us
@@ -270,7 +282,6 @@ begin
         and us.status = 'have'
         and us.quantity > 0
     ),
-    -- figuritas que me faltan
     my_needs as (
       select us.sticker_id, s.number
       from public.user_stickers us
@@ -278,7 +289,7 @@ begin
       where us.user_id = for_user_id
         and us.status = 'need'
     ),
-    -- lo que yo puedo darle a cada usuario (mis repetidas que ellos necesitan)
+    -- figuritas mías que el otro necesita
     i_give as (
       select
         us.user_id as other_user_id,
@@ -289,7 +300,7 @@ begin
         and us.status = 'need'
       group by us.user_id
     ),
-    -- lo que cada usuario me puede dar (sus repetidas que yo necesito)
+    -- figuritas del otro que yo necesito
     i_receive as (
       select
         us.user_id as other_user_id,
@@ -300,6 +311,15 @@ begin
         and us.status = 'have'
         and us.quantity > 0
       group by us.user_id
+    ),
+    -- unir ambos lados: aparece si hay al menos una figura en cualquier dirección
+    combined as (
+      select
+        coalesce(ig.other_user_id, ir.other_user_id) as uid,
+        coalesce(ig.numbers, array[]::integer[])      as give_nums,
+        coalesce(ir.numbers, array[]::integer[])      as recv_nums
+      from i_give ig
+      full outer join i_receive ir on ir.other_user_id = ig.other_user_id
     )
   select
     p.id,
@@ -308,14 +328,19 @@ begin
     p.city,
     p.reputation,
     p.trades_completed,
-    ig.numbers,
-    ir.numbers,
-    (array_length(ig.numbers, 1) + array_length(ir.numbers, 1)) as match_count,
-    least(100, (array_length(ig.numbers, 1) + array_length(ir.numbers, 1)) * 5) as match_percentage
-  from i_give ig
-  join i_receive ir on ir.other_user_id = ig.other_user_id
-  join public.profiles p on p.id = ig.other_user_id
-  order by match_count desc;
+    c.give_nums,
+    c.recv_nums,
+    (coalesce(array_length(c.give_nums, 1), 0) + coalesce(array_length(c.recv_nums, 1), 0)) as match_count,
+    least(100,
+      (coalesce(array_length(c.give_nums, 1), 0) + coalesce(array_length(c.recv_nums, 1), 0)) * 5
+    ) as match_percentage
+  from combined c
+  join public.profiles p on p.id = c.uid
+  where coalesce(array_length(c.give_nums, 1), 0) + coalesce(array_length(c.recv_nums, 1), 0) > 0
+  -- mutuos primero, luego los parciales
+  order by
+    (coalesce(array_length(c.give_nums, 1), 0) > 0 and coalesce(array_length(c.recv_nums, 1), 0) > 0) desc,
+    match_count desc;
 end;
 $$ language plpgsql security definer;
 
@@ -447,3 +472,9 @@ begin
   end loop;
 end;
 $$;
+
+-- =============================================
+-- TIEMPO REAL (REALTIME)
+-- =============================================
+alter publication supabase_realtime add table public.messages;
+
